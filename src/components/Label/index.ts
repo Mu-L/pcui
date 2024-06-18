@@ -1,4 +1,4 @@
-import * as pcuiClass from '../../class';
+import { CLASS_DEFAULT_MOUSEDOWN, CLASS_MULTIPLE_VALUES } from '../../class';
 import Element, { ElementArgs, IBindable, IBindableArgs, IFlexArgs, IPlaceholder, IPlaceholderArgs } from '../Element';
 
 const CLASS_LABEL = 'pcui-label';
@@ -45,6 +45,11 @@ class Label extends Element implements IPlaceholder, IBindable {
 
     protected _renderChanges: boolean;
 
+    /**
+     * Creates a new Label.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<LabelArgs> = {}) {
         super({ dom: 'span', ...args });
 
@@ -54,7 +59,7 @@ class Label extends Element implements IPlaceholder, IBindable {
         this.text = args.text ?? args.value ?? '';
 
         if (args.allowTextSelection) {
-            this.class.add(pcuiClass.DEFAULT_MOUSEDOWN);
+            this.class.add(CLASS_DEFAULT_MOUSEDOWN);
         }
 
         if (args.nativeTooltip) {
@@ -72,7 +77,7 @@ class Label extends Element implements IPlaceholder, IBindable {
     }
 
     protected _updateText(value: string) {
-        this.class.remove(pcuiClass.MULTIPLE_VALUES);
+        this.class.remove(CLASS_MULTIPLE_VALUES);
 
         if (this._text === value) return false;
 
@@ -90,7 +95,7 @@ class Label extends Element implements IPlaceholder, IBindable {
     }
 
     /**
-     * Gets / sets the text of the Label.
+     * Sets the text of the Label.
      */
     set text(value: string) {
         if (value === undefined || value === null) {
@@ -104,6 +109,9 @@ class Label extends Element implements IPlaceholder, IBindable {
         }
     }
 
+    /**
+     * Gets the text of the Label.
+     */
     get text(): string {
         return this._text;
     }
@@ -122,7 +130,7 @@ class Label extends Element implements IPlaceholder, IBindable {
 
         if (different) {
             this._updateText('');
-            this.class.add(pcuiClass.MULTIPLE_VALUES);
+            this.class.add(CLASS_MULTIPLE_VALUES);
         } else {
             this._updateText(values[0]);
         }

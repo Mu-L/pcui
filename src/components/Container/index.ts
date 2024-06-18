@@ -1,5 +1,5 @@
+import { CLASS_FLEX, CLASS_GRID, CLASS_RESIZABLE, CLASS_SCROLLABLE } from '../../class';
 import Element, { ElementArgs, IFlexArgs, IParentArgs } from '../Element';
-import * as pcuiClass from '../../class';
 
 const RESIZE_HANDLE_SIZE = 4;
 
@@ -11,7 +11,7 @@ const VALID_RESIZABLE_VALUES = [
     'left'
 ];
 
-const CLASS_RESIZING = pcuiClass.RESIZABLE + '-resizing';
+const CLASS_RESIZING = CLASS_RESIZABLE + '-resizing';
 const CLASS_RESIZABLE_HANDLE = 'pcui-resizable-handle';
 const CLASS_CONTAINER = 'pcui-container';
 
@@ -138,6 +138,11 @@ class Container extends Element {
 
     protected _resizable: string;
 
+    /**
+     * Creates a new Container.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<ContainerArgs> = {}) {
         super(args);
 
@@ -277,13 +282,7 @@ class Container extends Element {
      * @param index - The index to move the element to.
      */
     move(element: Element, index: number) {
-        let idx = -1;
-        for (let i = 0; i < this.dom.childNodes.length; i++) {
-            if (this.dom.childNodes[i].ui === element) {
-                idx = i;
-                break;
-            }
-        }
+        const idx = Array.prototype.indexOf.call(this.dom.childNodes, element.dom);
 
         if (idx === -1) {
             this.appendBefore(element, this.dom.childNodes[index]);
@@ -574,7 +573,6 @@ class Container extends Element {
      * @param node.root - The root node of the dom structure.
      * @param node.children - The children of the root node.
      * @returns The recursively appended element node.
-     *
      */
     protected _buildDomNode(node: { [x: string]: any; root?: any; children?: any; }): Container {
         const keys = Object.keys(node);
@@ -630,7 +628,7 @@ class Container extends Element {
     }
 
     /**
-     * Gets / sets whether the Element supports flex layout.
+     * Sets whether the Element supports flex layout.
      */
     set flex(value: boolean) {
         if (value === this._flex) return;
@@ -638,18 +636,21 @@ class Container extends Element {
         this._flex = value;
 
         if (value) {
-            this.class.add(pcuiClass.FLEX);
+            this.class.add(CLASS_FLEX);
         } else {
-            this.class.remove(pcuiClass.FLEX);
+            this.class.remove(CLASS_FLEX);
         }
     }
 
+    /**
+     * Gets whether the Element supports flex layout.
+     */
     get flex(): boolean {
         return this._flex;
     }
 
     /**
-     * Gets / sets whether the Element supports the grid layout.
+     * Sets whether the Element supports the grid layout.
      */
     set grid(value: boolean) {
         if (value === this._grid) return;
@@ -657,18 +658,21 @@ class Container extends Element {
         this._grid = value;
 
         if (value) {
-            this.class.add(pcuiClass.GRID);
+            this.class.add(CLASS_GRID);
         } else {
-            this.class.remove(pcuiClass.GRID);
+            this.class.remove(CLASS_GRID);
         }
     }
 
+    /**
+     * Gets whether the Element supports the grid layout.
+     */
     get grid(): boolean {
         return this._grid;
     }
 
     /**
-     * Gets /sets whether the Element should be scrollable.
+     * Sets whether the Element should be scrollable.
      */
     set scrollable(value: boolean) {
         if (this._scrollable === value) return;
@@ -676,20 +680,23 @@ class Container extends Element {
         this._scrollable = value;
 
         if (value) {
-            this.class.add(pcuiClass.SCROLLABLE);
+            this.class.add(CLASS_SCROLLABLE);
         } else {
-            this.class.remove(pcuiClass.SCROLLABLE);
+            this.class.remove(CLASS_SCROLLABLE);
         }
 
     }
 
+    /**
+     * Gets whether the Element should be scrollable.
+     */
     get scrollable(): boolean {
         return this._scrollable;
     }
 
     /**
-     * Gets / sets whether the Element is resizable and where the resize handle is located. Can
-     * be one of 'top', 'bottom', 'right', 'left'. Set to null to disable resizing.
+     * Sets whether the Element is resizable and where the resize handle is located. Can be one of
+     * 'top', 'bottom', 'right', 'left'. Set to null to disable resizing.
      */
     set resizable(value: string) {
         if (value === this._resizable) return;
@@ -701,7 +708,7 @@ class Container extends Element {
 
         // remove old class
         if (this._resizable) {
-            this.class.remove(`${pcuiClass.RESIZABLE}-${this._resizable}`);
+            this.class.remove(`${CLASS_RESIZABLE}-${this._resizable}`);
         }
 
         this._resizable = value;
@@ -709,8 +716,8 @@ class Container extends Element {
 
         if (value) {
             // add resize class and create / append resize handle
-            this.class.add(pcuiClass.RESIZABLE);
-            this.class.add(`${pcuiClass.RESIZABLE}-${value}`);
+            this.class.add(CLASS_RESIZABLE);
+            this.class.add(`${CLASS_RESIZABLE}-${value}`);
 
             if (!this._domResizeHandle) {
                 this._createResizeHandle();
@@ -718,42 +725,51 @@ class Container extends Element {
             this._dom.appendChild(this._domResizeHandle);
         } else {
             // remove resize class and resize handle
-            this.class.remove(pcuiClass.RESIZABLE);
+            this.class.remove(CLASS_RESIZABLE);
             if (this._domResizeHandle) {
                 this._dom.removeChild(this._domResizeHandle);
             }
         }
     }
 
+    /**
+     * Gets whether the Element is resizable and where the resize handle is located.
+     */
     get resizable(): string {
         return this._resizable;
     }
 
     /**
-     * Gets / sets the minimum size the Element can take when resized in pixels.
+     * Sets the minimum size the Element can take when resized in pixels.
      */
     set resizeMin(value: number) {
         this._resizeMin = Math.max(0, Math.min(value, this._resizeMax));
     }
 
+    /**
+     * Gets the minimum size the Element can take when resized in pixels.
+     */
     get resizeMin(): number {
         return this._resizeMin;
     }
 
     /**
-     * Gets / sets the maximum size the Element can take when resized in pixels.
+     * Sets the maximum size the Element can take when resized in pixels.
      */
     set resizeMax(value: number) {
         this._resizeMax = Math.max(this._resizeMin, value);
     }
 
+    /**
+     * Gets the maximum size the Element can take when resized in pixels.
+     */
     get resizeMax(): number {
         return this._resizeMax;
     }
 
     /**
-     * The internal DOM element used as a the container of all children.
-     * Can be overridden by derived classes.
+     * Sets the internal DOM element used as a the container of all children. Can be overridden by
+     * derived classes.
      */
     set domContent(value: HTMLElement) {
         if (this._domContent === value) return;
@@ -769,6 +785,9 @@ class Container extends Element {
         }
     }
 
+    /**
+     * Gets the internal DOM element used as a the container of all children.
+     */
     get domContent(): HTMLElement {
         return this._domContent;
     }

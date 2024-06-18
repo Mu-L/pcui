@@ -47,6 +47,11 @@ class InfoBox extends Container {
 
     protected _text: string;
 
+    /**
+     * Creates a new InfoBox.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<InfoBoxArgs> = {}) {
         super(args);
 
@@ -75,6 +80,9 @@ class InfoBox extends Container {
         }
     }
 
+    /**
+     * Gets the icon of the info box.
+     */
     get icon() {
         return this._icon;
     }
@@ -92,6 +100,9 @@ class InfoBox extends Container {
         }
     }
 
+    /**
+     * Gets the title of the info box.
+     */
     get title() {
         return this._title;
     }
@@ -109,6 +120,9 @@ class InfoBox extends Container {
         }
     }
 
+    /**
+     * Gets the text of the info box.
+     */
     get text() {
         return this._text;
     }

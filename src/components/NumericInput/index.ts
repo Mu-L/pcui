@@ -1,6 +1,6 @@
+import { CLASS_MULTIPLE_VALUES } from '../../class';
 import Element from '../Element';
 import InputElement, { InputElementArgs } from '../InputElement';
-import * as pcuiClass from '../../class';
 
 const CLASS_NUMERIC_INPUT = 'pcui-numeric-input';
 const CLASS_NUMERIC_INPUT_SLIDER_CONTROL = CLASS_NUMERIC_INPUT + '-slider-control';
@@ -73,6 +73,11 @@ class NumericInput extends InputElement {
 
     protected _sliderUsed = false;
 
+    /**
+     * Creates a new NumericInput.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<NumericInputArgs> = {}) {
         const textInputArgs = { ...args };
         // delete value because we want to set it after the other arguments
@@ -293,7 +298,7 @@ class NumericInput extends InputElement {
             this._domInput.value = String(value);
         }
 
-        this.class.remove(pcuiClass.MULTIPLE_VALUES);
+        this.class.remove(CLASS_MULTIPLE_VALUES);
 
         if (different) {
             this.emit('change', value);
@@ -304,7 +309,7 @@ class NumericInput extends InputElement {
 
     set value(value: number) {
         value = this._normalizeValue(value);
-        const forceUpdate = this.class.contains(pcuiClass.MULTIPLE_VALUES) && value === null && this._allowNull;
+        const forceUpdate = this.class.contains(CLASS_MULTIPLE_VALUES) && value === null && this._allowNull;
         const changed = this._updateValue(value, forceUpdate);
 
         if (changed && this.binding) {
@@ -327,7 +332,7 @@ class NumericInput extends InputElement {
 
         if (different) {
             this._updateValue(null);
-            this.class.add(pcuiClass.MULTIPLE_VALUES);
+            this.class.add(CLASS_MULTIPLE_VALUES);
             if (this._sliderControl) {
                 this._sliderControl.class.add(CLASS_NUMERIC_INPUT_SLIDER_CONTROL_HIDDEN);
             }
@@ -340,7 +345,7 @@ class NumericInput extends InputElement {
     }
 
     /**
-     * Gets / sets the minimum value this field can take.
+     * Sets the minimum value this field can take.
      */
     set min(value) {
         if (this._min === value) return;
@@ -352,12 +357,15 @@ class NumericInput extends InputElement {
         }
     }
 
+    /**
+     * Gets the minimum value this field can take.
+     */
     get min() {
         return this._min;
     }
 
     /**
-     * Gets / sets the maximum value this field can take.
+     * Sets the maximum value this field can take.
      */
     set max(value) {
         if (this._max === value) return;
@@ -369,12 +377,15 @@ class NumericInput extends InputElement {
         }
     }
 
+    /**
+     * Gets the maximum value this field can take.
+     */
     get max() {
         return this._max;
     }
 
     /**
-     * Gets / sets the precision of the input.
+     * Sets the precision of the input.
      */
     set precision(value) {
         if (this._precision === value) return;
@@ -386,17 +397,23 @@ class NumericInput extends InputElement {
         }
     }
 
+    /**
+     * Gets the precision of the input.
+     */
     get precision() {
         return this._precision;
     }
 
     /**
-     * Gets / sets the amount that the value will be increased or decreased when using the arrow keys and the slider input.
+     * Sets the amount that the value will be increased or decreased when using the arrow keys and the slider input.
      */
     set step(value) {
         this._step = value;
     }
 
+    /**
+     * Gets the amount that the value will be increased or decreased when using the arrow keys and the slider input.
+     */
     get step() {
         return this._step;
     }

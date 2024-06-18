@@ -1,6 +1,6 @@
+import { CLASS_MULTIPLE_VALUES } from '../../class';
 import Element, { ElementArgs, IBindable, IBindableArgs, IFlexArgs, IFocusable, IPlaceholder, IPlaceholderArgs } from '../Element';
 import NumericInput from '../NumericInput';
-import * as pcuiClass from '../../class';
 
 const CLASS_SLIDER = 'pcui-slider';
 const CLASS_SLIDER_CONTAINER = CLASS_SLIDER + '-container';
@@ -72,7 +72,7 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
 
     protected _cursorHandleOffset = 0;
 
-    protected _touchId: number = null;
+    protected _pointerId: number = null;
 
     /**
      * Creates a new SliderInput.
@@ -132,8 +132,7 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
         this._domHandle.classList.add(CLASS_SLIDER_HANDLE);
         this._domBar.appendChild(this._domHandle);
 
-        this._domSlider.addEventListener('mousedown', this._onMouseDown);
-        this._domSlider.addEventListener('touchstart', this._onTouchStart, { passive: true });
+        this._domSlider.addEventListener('pointerdown', this._onPointerDown);
         this._domHandle.addEventListener('keydown', this._onKeyDown);
 
         if (args.value !== undefined) {
@@ -153,81 +152,33 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
     destroy() {
         if (this._destroyed) return;
 
-        this._domSlider.removeEventListener('mousedown', this._onMouseDown);
-        this._domSlider.removeEventListener('touchstart', this._onTouchStart);
-
+        this._domSlider.removeEventListener('pointerdown', this._onPointerDown);
         this._domHandle.removeEventListener('keydown', this._onKeyDown);
-
-        this.dom.removeEventListener('mouseup', this._onMouseUp);
-        this.dom.removeEventListener('mousemove', this._onMouseMove);
-        this.dom.removeEventListener('touchmove', this._onTouchMove);
-        this.dom.removeEventListener('touchend', this._onTouchEnd);
 
         super.destroy();
     }
 
-    protected _onMouseDown = (evt: MouseEvent) => {
-        if (evt.button !== 0 || !this.enabled || this.readOnly) return;
+    protected _onPointerDown = (evt: PointerEvent) => {
+        if ((evt.pointerType === 'mouse' && evt.button !== 0) || !this.enabled || this.readOnly || this._pointerId !== null) return;
+        evt.stopPropagation();
+        this._domSlider.setPointerCapture(evt.pointerId);
+        this._pointerId = evt.pointerId;
         this._onSlideStart(evt.pageX);
     };
 
-    protected _onMouseMove = (evt: MouseEvent) => {
+    protected _onPointerMove = (evt: PointerEvent) => {
+        if (evt.pointerId !== this._pointerId) return;
         evt.stopPropagation();
         evt.preventDefault();
         this._onSlideMove(evt.pageX);
     };
 
-    protected _onMouseUp = (evt: MouseEvent) => {
+    protected _onPointerUp = (evt: PointerEvent) => {
+        if (evt.pointerId !== this._pointerId || this._pointerId === null) return;
         evt.stopPropagation();
-        evt.preventDefault();
+        this._domSlider.releasePointerCapture(evt.pointerId);
         this._onSlideEnd(evt.pageX);
-    };
-
-    protected _onTouchStart = (evt: TouchEvent) => {
-        if (!this.enabled || this.readOnly) return;
-
-        for (let i = 0; i < evt.changedTouches.length; i++) {
-            const touch = evt.changedTouches[i];
-            const node = touch.target as Node;
-
-            if (!node.ui || node.ui !== this)
-                continue;
-
-            this._touchId = touch.identifier;
-            this._onSlideStart(touch.pageX);
-            break;
-        }
-    };
-
-    protected _onTouchMove = (evt: TouchEvent) => {
-        for (let i = 0; i < evt.changedTouches.length; i++) {
-            const touch = evt.changedTouches[i];
-
-            if (touch.identifier !== this._touchId)
-                continue;
-
-            evt.stopPropagation();
-            evt.preventDefault();
-
-            this._onSlideMove(touch.pageX);
-            break;
-        }
-    };
-
-    protected _onTouchEnd = (evt: TouchEvent) => {
-        for (let i = 0; i < evt.changedTouches.length; i++) {
-            const touch = evt.changedTouches[i];
-
-            if (touch.identifier !== this._touchId)
-                continue;
-
-            evt.stopPropagation();
-            evt.preventDefault();
-
-            this._onSlideEnd(touch.pageX);
-            this._touchId = null;
-            break;
-        }
+        this._pointerId = null;
     };
 
     protected _onKeyDown = (evt: KeyboardEvent) => {
@@ -289,13 +240,8 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
 
     protected _onSlideStart(pageX: number) {
         this._domHandle.focus();
-        if (this._touchId === null) {
-            window.addEventListener('mousemove', this._onMouseMove);
-            window.addEventListener('mouseup', this._onMouseUp);
-        } else {
-            window.addEventListener('touchmove', this._onTouchMove);
-            window.addEventListener('touchend', this._onTouchEnd);
-        }
+        window.addEventListener('pointermove', this._onPointerMove);
+        window.addEventListener('pointerup', this._onPointerUp);
 
         this.class.add(CLASS_SLIDER_ACTIVE);
 
@@ -337,13 +283,8 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
 
         this.class.remove(CLASS_SLIDER_ACTIVE);
 
-        if (this._touchId === null) {
-            window.removeEventListener('mousemove', this._onMouseMove);
-            window.removeEventListener('mouseup', this._onMouseUp);
-        } else {
-            window.removeEventListener('touchmove', this._onTouchMove);
-            window.removeEventListener('touchend', this._onTouchEnd);
-        }
+        window.removeEventListener('pointermove', this._onPointerMove);
+        window.removeEventListener('pointerup', this._onPointerUp);
 
         if (this.binding) {
             this.binding.historyCombine = this._historyCombine;
@@ -352,7 +293,6 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
             this._historyCombine = false;
             this._historyPostfix = null;
         }
-
     }
 
     focus() {
@@ -365,7 +305,7 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
     }
 
     /**
-     * Gets / sets the minimum value that the slider field can take.
+     * Sets the minimum value that the slider field can take.
      */
     set sliderMin(value) {
         if (this._sliderMin === value) return;
@@ -374,12 +314,15 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
         this._updateHandle(this.value);
     }
 
+    /**
+     * Gets the minimum value that the slider field can take.
+     */
     get sliderMin() {
         return this._sliderMin;
     }
 
     /**
-     * Gets / sets the maximum value that the slider field can take.
+     * Sets the maximum value that the slider field can take.
      */
     set sliderMax(value) {
         if (this._sliderMax === value) return;
@@ -388,16 +331,19 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
         this._updateHandle(this.value);
     }
 
+    /**
+     * Gets the maximum value that the slider field can take.
+     */
     get sliderMax() {
         return this._sliderMax;
     }
 
     set value(value) {
         this._numericInput.value = value;
-        if (this._numericInput.class.contains(pcuiClass.MULTIPLE_VALUES)) {
-            this.class.add(pcuiClass.MULTIPLE_VALUES);
+        if (this._numericInput.class.contains(CLASS_MULTIPLE_VALUES)) {
+            this.class.add(CLASS_MULTIPLE_VALUES);
         } else {
-            this.class.remove(pcuiClass.MULTIPLE_VALUES);
+            this.class.remove(CLASS_MULTIPLE_VALUES);
         }
     }
 
@@ -408,10 +354,10 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
     /* eslint accessor-pairs: 0 */
     set values(values: Array<number>) {
         this._numericInput.values = values;
-        if (this._numericInput.class.contains(pcuiClass.MULTIPLE_VALUES)) {
-            this.class.add(pcuiClass.MULTIPLE_VALUES);
+        if (this._numericInput.class.contains(CLASS_MULTIPLE_VALUES)) {
+            this.class.add(CLASS_MULTIPLE_VALUES);
         } else {
-            this.class.remove(pcuiClass.MULTIPLE_VALUES);
+            this.class.remove(CLASS_MULTIPLE_VALUES);
         }
     }
 
@@ -424,45 +370,57 @@ class SliderInput extends Element implements IBindable, IFocusable, IPlaceholder
     }
 
     /**
-     * Gets / sets the minimum value that the numeric input field can take.
+     * Sets the minimum value that the numeric input field can take.
      */
     set min(value) {
         this._numericInput.min = value;
     }
 
+    /**
+     * Gets the minimum value that the numeric input field can take.
+     */
     get min() {
         return this._numericInput.min;
     }
 
     /**
-     * Gets / sets the maximum value that the numeric input field can take.
+     * Sets the maximum value that the numeric input field can take.
      */
     set max(value) {
         this._numericInput.max = value;
     }
 
+    /**
+     * Gets the maximum value that the numeric input field can take.
+     */
     get max() {
         return this._numericInput.max;
     }
 
     /**
-     * Gets / sets the amount that the value will be increased or decreased when using the arrow keys. Holding Shift will use 10x the step.
+     * Sets the amount that the value will be increased or decreased when using the arrow keys. Holding Shift will use 10x the step.
      */
     set step(value) {
         this._numericInput.step = value;
     }
 
+    /**
+     * Gets the amount that the value will be increased or decreased when using the arrow keys.
+     */
     get step() {
         return this._numericInput.step;
     }
 
     /**
-     * Gets / sets the maximum number of decimals a value can take.
+     * Sets the maximum number of decimals a value can take.
      */
     set precision(value) {
         this._numericInput.precision = value;
     }
 
+    /**
+     * Gets the maximum number of decimals a value can take.
+     */
     get precision() {
         return this._numericInput.precision;
     }

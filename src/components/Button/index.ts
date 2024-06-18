@@ -38,6 +38,11 @@ class Button extends Element {
 
     protected _size: string | null;
 
+    /**
+     * Creates a new Button.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<ButtonArgs> = {}) {
         super({ dom: 'button', ...args });
 
@@ -84,7 +89,7 @@ class Button extends Element {
     }
 
     /**
-     * Gets / sets the text of the button.
+     * Sets the text of the button.
      */
     set text(value: string) {
         if (this._text === value) return;
@@ -96,12 +101,15 @@ class Button extends Element {
         }
     }
 
+    /**
+     * Gets the text of the button.
+     */
     get text(): string {
         return this._text;
     }
 
     /**
-     * The CSS code for an icon for the button. e.g. 'E401' (notice we omit the '\\' character).
+     * Sets the CSS code for an icon for the button. e.g. 'E401' (notice we omit the '\\' character).
      */
     set icon(value: string) {
         if (this._icon === value || !value.match(/^E[0-9]{0,4}$/)) return;
@@ -114,12 +122,15 @@ class Button extends Element {
         }
     }
 
+    /**
+     * Gets the CSS code for an icon for the button.
+     */
     get icon(): string {
         return this._icon;
     }
 
     /**
-     * Gets / sets the 'size' type of the button. Can be null or 'small'.
+     * Sets the 'size' type of the button. Can be null or 'small'.
      */
     set size(value: string) {
         if (this._size === value) return;
@@ -135,6 +146,9 @@ class Button extends Element {
         }
     }
 
+    /**
+     * Gets the 'size' type of the button.
+     */
     get size(): string {
         return this._size;
     }

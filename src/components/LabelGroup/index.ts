@@ -35,6 +35,11 @@ class LabelGroup extends Container {
 
     protected _field: Element;
 
+    /**
+     * Creates a new LabelGroup.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<LabelGroupArgs> = {}) {
         super(args);
 
@@ -69,18 +74,21 @@ class LabelGroup extends Container {
     }
 
     /**
-     * Sets / Gets the text of the label.
+     * Sets the text of the label.
      */
     set text(value) {
         this._label.text = value;
     }
 
+    /**
+     * Gets the text of the label.
+     */
     get text() {
         return this._label.text;
     }
 
     /**
-     * Sets / Gets whether to align the label at the top of the group. Defaults to `false` which aligns it at the center.
+     * Sets whether to align the label at the top of the group. Defaults to `false` which aligns it at the center.
      */
     set labelAlignTop(value) {
         if (value) {
@@ -90,6 +98,9 @@ class LabelGroup extends Container {
         }
     }
 
+    /**
+     * Gets whether to align the label at the top of the group.
+     */
     get labelAlignTop() {
         return this.class.contains(CLASS_LABEL_TOP);
     }

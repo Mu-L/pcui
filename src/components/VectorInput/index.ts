@@ -1,7 +1,7 @@
 import { Observer } from '@playcanvas/observer';
+import { CLASS_FOCUS, CLASS_MULTIPLE_VALUES } from '../../class';
 import Element, { ElementArgs, IBindable, IBindableArgs, IFocusable, IPlaceholder, IPlaceholderArgs } from '../Element';
 import NumericInput from '../NumericInput';
-import * as pcuiClass from '../../class';
 
 const CLASS_VECTOR_INPUT = 'pcui-vector-input';
 
@@ -45,6 +45,11 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
 
     protected _bindAllInputs = false;
 
+    /**
+     * Creates a new VectorInput.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<VectorInputArgs> = {}) {
         const elementArgs = { ...args };
         // set binding after inputs have been created
@@ -71,7 +76,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
                 if (this._bindAllInputs) {
                     input.focus();
                     for (let i = 0; i < this._inputs.length; i++) {
-                        this._inputs[i].class.add(pcuiClass.FOCUS);
+                        this._inputs[i].class.add(CLASS_FOCUS);
                     }
 
                     if (this.binding) {
@@ -83,7 +88,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
                 this._onInputChange(input);
                 this._bindAllInputs = false;
                 for (let i = 0; i < this._inputs.length; i++) {
-                    this._inputs[i].class.remove(pcuiClass.FOCUS);
+                    this._inputs[i].class.remove(CLASS_FOCUS);
                 }
                 input.blur();
 
@@ -122,12 +127,12 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
         if (this._applyingChange) return;
 
         // check if any of our inputs have the MULTIPLE_VALUES class and if so inherit it for us as well
-        const multipleValues = this._inputs.some(input => input.class.contains(pcuiClass.MULTIPLE_VALUES));
+        const multipleValues = this._inputs.some(input => input.class.contains(CLASS_MULTIPLE_VALUES));
 
         if (multipleValues) {
-            this.class.add(pcuiClass.MULTIPLE_VALUES);
+            this.class.add(CLASS_MULTIPLE_VALUES);
         } else {
-            this.class.remove(pcuiClass.MULTIPLE_VALUES);
+            this.class.remove(CLASS_MULTIPLE_VALUES);
         }
 
         if (this._bindAllInputs) {
@@ -144,7 +149,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
     }
 
     protected _updateValue(value: number[]) {
-        this.class.remove(pcuiClass.MULTIPLE_VALUES);
+        this.class.remove(CLASS_MULTIPLE_VALUES);
 
         if (JSON.stringify(this.value) === JSON.stringify(value)) return false;
 
@@ -296,7 +301,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
     }
 
     /**
-     * Gets / sets the minimum value accepted by all inputs of the vector.
+     * Sets the minimum value accepted by all inputs of the vector.
      */
     set min(value) {
         for (const input of this._inputs) {
@@ -304,12 +309,15 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
         }
     }
 
+    /**
+     * Gets the minimum value accepted by all inputs of the vector.
+     */
     get min() {
         return this._inputs[0].min;
     }
 
     /**
-     * Gets / sets the maximum value accepted by all inputs of the vector.
+     * Sets the maximum value accepted by all inputs of the vector.
      */
     set max(value) {
         for (const input of this._inputs) {
@@ -317,12 +325,15 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
         }
     }
 
+    /**
+     * Gets the maximum value accepted by all inputs of the vector.
+     */
     get max() {
         return this._inputs[0].max;
     }
 
     /**
-     * Gets / sets the maximum number of decimal places supported by all inputs of the vector.
+     * Sets the maximum number of decimal places supported by all inputs of the vector.
      */
     set precision(value) {
         for (const input of this._inputs) {
@@ -330,13 +341,16 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
         }
     }
 
+    /**
+     * Gets the maximum number of decimal places supported by all inputs of the vector.
+     */
     get precision() {
         return this._inputs[0].precision;
     }
 
     /**
-     * Gets / sets the amount that the value will be increased or decreased when using the arrow
-     * keys and the slider input for all inputs of the vector.
+     * Sets the amount that the value will be increased or decreased when using the arrow keys and
+     * the slider input for all inputs of the vector.
      */
     set step(value) {
         for (const input of this._inputs) {
@@ -344,6 +358,10 @@ class VectorInput extends Element implements IBindable, IFocusable, IPlaceholder
         }
     }
 
+    /**
+     * Gets the amount that the value will be increased or decreased when using the arrow keys and
+     * the slider input for all inputs of the vector.
+     */
     get step() {
         return this._inputs[0].step;
     }

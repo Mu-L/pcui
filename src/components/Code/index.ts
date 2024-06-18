@@ -23,6 +23,11 @@ class Code extends Container {
 
     protected _text: string;
 
+    /**
+     * Creates a new Code.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<CodeArgs> = {}) {
         super(args);
 
@@ -39,13 +44,16 @@ class Code extends Container {
     }
 
     /**
-     * Gets / sets the text to display in the code block.
+     * Sets the text to display in the code block.
      */
     set text(value) {
         this._text = value;
         this._inner.text = value;
     }
 
+    /**
+     * Gets the text to display in the code block.
+     */
     get text() {
         return this._text;
     }

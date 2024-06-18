@@ -23,6 +23,11 @@ class Canvas extends Element {
 
     protected _ratio = 1;
 
+    /**
+     * Creates a new Canvas.
+     *
+     * @param args - The arguments.
+     */
     constructor(args: Readonly<CanvasArgs> = {}) {
         super({ dom: 'canvas', ...args });
 
@@ -60,7 +65,7 @@ class Canvas extends Element {
     }
 
     /**
-     * Gets / sets the width of the canvas.
+     * Sets the width of the canvas.
      */
     set width(value: number) {
         if (this._width === value)
@@ -75,13 +80,16 @@ class Canvas extends Element {
         this.emit('resize', this._width, this._height);
     }
 
+    /**
+     * Gets the width of the canvas.
+     */
     get width(): number {
         return this._width;
     }
 
 
     /**
-     * Gets / sets the height of the canvas.
+     * Sets the height of the canvas.
      */
     set height(value: number) {
         if (this._height === value)
@@ -96,6 +104,9 @@ class Canvas extends Element {
         this.emit('resize', this._width, this._height);
     }
 
+    /**
+     * Gets the height of the canvas.
+     */
     get height(): number {
         return this._height;
     }
