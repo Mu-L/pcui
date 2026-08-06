@@ -1,8 +1,10 @@
-import { Observer } from '@playcanvas/observer';
+import type { Observer } from '@playcanvas/observer';
 
-import { Container, ContainerArgs } from '../Container';
-import { Element, IBindable } from '../Element';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
+import type { Element, IBindable } from '../Element';
 import { Label } from '../Label';
+import type { Menu } from '../Menu';
 
 const CLASS_MENU_ITEM = 'pcui-menu-item';
 const CLASS_MENU_ITEM_CONTENT = `${CLASS_MENU_ITEM}-content`;
@@ -14,7 +16,7 @@ const CLASS_MENU_ITEM_SHORTCUT = `${CLASS_MENU_ITEM}-shortcut`;
  * The arguments for the {@link MenuItem} constructor.
  */
 interface MenuItemArgs extends ContainerArgs {
-    value?: any;
+    value?: string;
     /**
      * Whether the MenuItem has any child MenuItems.
      */
@@ -30,7 +32,7 @@ interface MenuItemArgs extends ContainerArgs {
     /**
      * Sets the parent Menu Element.
      */
-    menu?: any;
+    menu?: Menu;
     /**
      * Sets the function called when we select the MenuItem.
      */
@@ -46,7 +48,7 @@ interface MenuItemArgs extends ContainerArgs {
     /**
      * An array of MenuItem constructor data. If defined then child MenuItems will be created and added to the MenuItem.
      */
-    items?: Array<MenuItemArgs>;
+    items?: MenuItemArgs[];
     /**
      * Sets the keyboard shortcut to display on the MenuItem (e.g., 'Ctrl+C').
      */
@@ -58,7 +60,7 @@ interface MenuItemArgs extends ContainerArgs {
  * contain child MenuItems (by appending them to the MenuItem). This can be useful to show nested
  * Menus.
  */
-class MenuItem extends Container implements IBindable {
+class MenuItem extends Container implements IBindable<string> {
     /**
      * The function called when the MenuItem is selected.
      */
@@ -86,7 +88,7 @@ class MenuItem extends Container implements IBindable {
 
     protected _containerItems: Container;
 
-    protected _menu: any = null;
+    protected _menu: Menu = null;
 
     protected _renderChanges: boolean;
 
@@ -192,7 +194,7 @@ class MenuItem extends Container implements IBindable {
         }
     };
 
-    link(observers: Observer|Observer[], paths: string|string[]) {
+    link(observers: Observer | Observer[], paths: string | string[]) {
         super.link(observers, paths);
         this._labelText.link(observers, paths);
     }
@@ -237,7 +239,6 @@ class MenuItem extends Container implements IBindable {
         return this.text;
     }
 
-    /* eslint accessor-pairs: 0 */
     set values(values: string[]) {
         this._labelText.values = values;
     }

@@ -1,8 +1,9 @@
-import { EventHandle } from '@playcanvas/observer';
+import type { EventHandle } from '@playcanvas/observer';
 
 import { CLASS_MULTIPLE_VALUES, CLASS_NOT_FLEXIBLE } from '../../class';
 import { _hsv2rgb, _rgb2hsv } from '../../Math/color-value';
-import { Element, ElementArgs, IBindable, IBindableArgs } from '../Element';
+import type { ElementArgs, IBindable, IBindableArgs } from '../Element';
+import { Element } from '../Element';
 import { NumericInput } from '../NumericInput';
 import { Overlay } from '../Overlay';
 import { TextInput } from '../TextInput';
@@ -12,7 +13,7 @@ const CLASS_ROOT = 'pcui-color-input';
 /**
  * The arguments for the {@link ColorPicker} constructor.
  */
-interface ColorPickerArgs extends ElementArgs, IBindableArgs {
+interface ColorPickerArgs extends ElementArgs<number[]>, IBindableArgs<number[]> {
     /**
      * An array of 4 integers containing the RGBA values the picker should be initialized to. Defaults to `[0, 0, 255, 1]`.
      */
@@ -26,7 +27,7 @@ interface ColorPickerArgs extends ElementArgs, IBindableArgs {
 /**
  * Represents a color picker.
  */
-class ColorPicker extends Element implements IBindable {
+class ColorPicker extends Element implements IBindable<number[]> {
     protected _historyCombine = false;
 
     protected _historyPostfix: string = null;
@@ -365,7 +366,7 @@ class ColorPicker extends Element implements IBindable {
 
     protected _openColorPicker() {
         // open color picker
-        this._callPicker(this.value.map(c => Math.floor(c * 255)));
+        this._callPicker(this.value.map((c) => Math.floor(c * 255)));
 
         // picked color
         this._evtColorPick = this.on('picker:color', (color) => {
@@ -379,7 +380,6 @@ class ColorPicker extends Element implements IBindable {
 
                 this.binding.historyCombine = true;
                 this._binding.historyPostfix = `(${Date.now()})`;
-
             } else {
                 this._historyCombine = false;
                 this._historyPostfix = null;
@@ -400,7 +400,7 @@ class ColorPicker extends Element implements IBindable {
 
         // color changed, update picker
         this._evtColorToPicker = this.on('change', () => {
-            this._setPickerColor(this.value.map(c => Math.floor(c * 255)));
+            this._setPickerColor(this.value.map((c) => Math.floor(c * 255)));
         });
     }
 
@@ -489,7 +489,7 @@ class ColorPicker extends Element implements IBindable {
     protected _getHex() {
         let hex = '';
         for (let i = 0; i < this._channelsNumber; i++) {
-            hex += (`00${this._pickerChannels[i].value.toString(16)}`).slice(-2).toUpperCase();
+            hex += `00${this._pickerChannels[i].value.toString(16)}`.slice(-2).toUpperCase();
         }
         return hex;
     }
@@ -521,7 +521,7 @@ class ColorPicker extends Element implements IBindable {
         const y = Math.max(0, Math.min(this._size, Math.floor(event.clientY - rect.top)));
 
         this._colorHSV[1] = x / this._size;
-        this._colorHSV[2] = 1.0 - (y / this._size);
+        this._colorHSV[2] = 1.0 - y / this._size;
 
         this._directInput = false;
         const rgb = _hsv2rgb(this._colorHSV);
@@ -650,7 +650,6 @@ class ColorPicker extends Element implements IBindable {
         this._changing = true;
 
         const hex = this._fieldHex.value.trim().toLowerCase();
-        /* eslint-disable-next-line regexp/no-unused-capturing-group */
         if (/^([0-9a-f]{2}){3,4}$/.test(hex)) {
             for (let i = 0; i < this._channelsNumber; i++) {
                 this._pickerChannels[i].value = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -661,9 +660,11 @@ class ColorPicker extends Element implements IBindable {
     }
 
     protected _onChangeRgb() {
-        const color = this._pickerChannels.map((channel) => {
-            return channel.value || 0;
-        }).slice(0, this._channelsNumber);
+        const color = this._pickerChannels
+            .map((channel) => {
+                return channel.value || 0;
+            })
+            .slice(0, this._channelsNumber);
 
         const hsv = _rgb2hsv(color);
         if (this._directInput) {
@@ -712,7 +713,7 @@ class ColorPicker extends Element implements IBindable {
         }
 
         // position
-        this._pickOpacityHandle.style.top = `${Math.floor(this._size * (1.0 - (Math.max(0, Math.min(255, value)) / 255)))}px`;
+        this._pickOpacityHandle.style.top = `${Math.floor(this._size * (1.0 - Math.max(0, Math.min(255, value)) / 255))}px`;
 
         // color
         this._pickOpacityHandle.style.backgroundColor = `rgb(${value}, ${value}, ${value})`;
@@ -724,9 +725,14 @@ class ColorPicker extends Element implements IBindable {
     callbackHandle() {
         this._callingCallback = false;
 
-        this.emit('picker:color', this._pickerChannels.map((channel) => {
-            return channel.value || 0;
-        }).slice(0, this._channelsNumber));
+        this.emit(
+            'picker:color',
+            this._pickerChannels
+                .map((channel) => {
+                    return channel.value || 0;
+                })
+                .slice(0, this._channelsNumber)
+        );
 
         // close the typed-input "drag" started in _onChangeRgb so the picker
         // doesn't stay stuck in dragging state (which makes _setPickerColor a
@@ -762,15 +768,13 @@ class ColorPicker extends Element implements IBindable {
         return this._value.slice(0, this._channels);
     }
 
-    /* eslint accessor-pairs: 0 */
-    set values(values: Array<any>) {
+    set values(values: number[][]) {
         let different = false;
         const value = values[0];
         for (let i = 1; i < values.length; i++) {
             if (Array.isArray(value)) {
                 const other: number[] = values[i];
-                if (!Array.isArray(other) || value.length !== other.length ||
-                    value.some((v, j) => v !== other[j])) {
+                if (!Array.isArray(other) || value.length !== other.length || value.some((v, j) => v !== other[j])) {
                     different = true;
                     break;
                 }

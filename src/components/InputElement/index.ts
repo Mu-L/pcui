@@ -1,28 +1,29 @@
 import { CLASS_FOCUS } from '../../class';
-import { Element, ElementArgs, IBindable, IBindableArgs, IFocusable, IPlaceholder, IPlaceholderArgs } from '../Element';
+import type { ElementArgs, IBindable, IBindableArgs, IFocusable, IPlaceholder, IPlaceholderArgs } from '../Element';
+import { Element } from '../Element';
 
 const CLASS_INPUT_ELEMENT = 'pcui-input-element';
 
 /**
  * The arguments for the {@link InputElement} constructor.
  */
-interface InputElementArgs extends ElementArgs, IBindableArgs, IPlaceholderArgs {
+interface InputElementArgs<T = string | number | string[]> extends ElementArgs<T>, IBindableArgs<T>, IPlaceholderArgs {
     /**
      * Sets whether pressing Enter will blur (unfocus) the field. Defaults to `true`.
      */
-    blurOnEnter?: boolean,
+    blurOnEnter?: boolean;
     /**
      * Sets whether pressing Escape will blur (unfocus) the field. Defaults to `true`.
      */
-    blurOnEscape?: boolean,
+    blurOnEscape?: boolean;
     /**
      * Sets whether any key up event will cause a change event to be fired.
      */
-    keyChange?: boolean,
+    keyChange?: boolean;
     /**
      * The input element to associate this {@link InputElement} with. If not supplied one will be created instead.
      */
-    input?: HTMLInputElement
+    input?: HTMLInputElement;
 }
 
 /**
@@ -85,7 +86,7 @@ abstract class InputElement extends Element implements IBindable, IFocusable, IP
         this._suspendInputChangeEvt = false;
 
         if (args.value !== undefined) {
-            this._domInput.value = args.value;
+            this._domInput.value = args.value as string;
         }
         this.placeholder = args.placeholder ?? '';
         this.renderChanges = args.renderChanges ?? false;
@@ -160,7 +161,9 @@ abstract class InputElement extends Element implements IBindable, IFocusable, IP
         this.emit('keydown', evt);
     }
 
-    protected _onInputChange(evt: Event) {}
+    protected _onInputChange(evt: Event) {
+        // implemented by derived classes
+    }
 
     protected _onInputKeyUp = (evt: KeyboardEvent) => {
         if (evt.key !== 'Escape') {
@@ -215,7 +218,6 @@ abstract class InputElement extends Element implements IBindable, IFocusable, IP
         return this.dom.getAttribute('placeholder') ?? '';
     }
 
-
     /**
      * Sets the method to call when keyup is called on the input DOM element.
      */
@@ -244,13 +246,13 @@ abstract class InputElement extends Element implements IBindable, IFocusable, IP
         return this._domInput;
     }
 
-    abstract set value(value: any);
+    abstract set value(value: unknown);
 
-    abstract get value(): any;
+    abstract get value(): unknown;
 
-    abstract set values(value: Array<any>);
+    abstract set values(value: unknown[]);
 
-    abstract get values(): Array<any>;
+    abstract get values(): unknown[];
 
     set renderChanges(value: boolean) {
         this._renderChanges = value;

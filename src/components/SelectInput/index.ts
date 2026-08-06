@@ -2,7 +2,8 @@ import { CLASS_FOCUS, CLASS_MULTIPLE_VALUES } from '../../class';
 import { searchItems } from '../../helpers/search';
 import { Button } from '../Button';
 import { Container } from '../Container';
-import { Element, ElementArgs, IBindable, IBindableArgs, IFocusable, IPlaceholderArgs } from '../Element';
+import type { ElementArgs, IBindable, IBindableArgs, IFocusable, IPlaceholderArgs } from '../Element';
+import { Element } from '../Element';
 import { Label } from '../Label';
 import { TextInput } from '../TextInput';
 
@@ -29,18 +30,22 @@ const CLASS_OPEN = 'pcui-open';
 
 const DEFAULT_BOTTOM_OFFSET = 25;
 
+type OptionValue = boolean | number | string;
+type Comparable = { equals: (value: unknown) => boolean };
+type SelectHandler = { bivarianceHack(value: unknown): void }['bivarianceHack'];
+
 /**
  * The arguments for the {@link SelectInput} constructor.
  */
-interface SelectInputArgs extends ElementArgs, IBindableArgs, IPlaceholderArgs {
+interface SelectInputArgs extends ElementArgs<unknown>, IBindableArgs<unknown>, IPlaceholderArgs {
     /**
      * Used to map the options.
      */
-    optionsFn?: any;
+    optionsFn?: () => { t: string; v: OptionValue }[];
     /**
      * Default value for the input.
      */
-    defaultValue?: any;
+    defaultValue?: unknown;
     /**
      * If `true` then the input value becomes an array allowing the selection of multiple options. Defaults to `false`.
      */
@@ -48,11 +53,11 @@ interface SelectInputArgs extends ElementArgs, IBindableArgs, IPlaceholderArgs {
     /**
      * The dropdown options of the input. Contains an array of objects with the following format \{v: Any, t: String\} where v is the value and t is the text of the option.
      */
-    options?: { t: string, v: boolean | number | string }[];
+    options?: { t: string; v: boolean | number | string }[];
     /**
      * An array of values against which new values are checked before they are created. If a value is in the array it will not be created.
      */
-    invalidOptions?: Array<any>;
+    invalidOptions?: unknown[];
     /**
      * If `true` then null is a valid input value. Defaults to `false`.
      */
@@ -80,7 +85,7 @@ interface SelectInputArgs extends ElementArgs, IBindableArgs, IPlaceholderArgs {
     /**
      * The order that the options should be checked in to find a valid fallback option that isn't included in the disabledOptions object.
      */
-    fallbackOrder?: Array<string>;
+    fallbackOrder?: string[];
     /**
      * All the option values that should be disabled. The keys of the object are the values of the options and the values are the text to show when the option is disabled.
      */
@@ -88,18 +93,17 @@ interface SelectInputArgs extends ElementArgs, IBindableArgs, IPlaceholderArgs {
     /**
      * If provided, this function will be called each time an option is selected.
      */
-    onSelect?: (value: string) => void;
+    onSelect?: SelectHandler;
     /**
      * Text to display in the SelectInput before the selected option.
      */
     prefix?: string;
 }
 
-
 /**
  * An input that allows selecting from a dropdown or entering tags.
  */
-class SelectInput extends Element implements IBindable, IFocusable {
+class SelectInput extends Element implements IBindable<unknown>, IFocusable {
     /**
      * Fired when the value of the SelectInput changes.
      *
@@ -178,33 +182,33 @@ class SelectInput extends Element implements IBindable, IFocusable {
 
     protected _valueToLabel: Record<string, Label> = {};
 
-    protected _labelToValue: Map<Label, any> = new Map();
+    protected _labelToValue = new Map<Label, unknown>();
 
     protected _labelHighlighted: Label = null;
 
-    protected _optionsFn: any;
+    protected _optionsFn?: () => { t: string; v: OptionValue }[];
 
     protected _allowNull: boolean;
 
-    protected _values: any;
+    protected _values: unknown[][];
 
-    protected _value: any;
+    protected _value: unknown;
 
     protected _createLabelContainer: Container;
 
-    protected _options: { t: string, v: boolean | number | string }[];
+    protected _options: { t: string; v: boolean | number | string }[];
 
-    protected _invalidOptions: any;
+    protected _invalidOptions: unknown[];
 
     protected _renderChanges: boolean;
 
     protected _disabledOptions: Record<string, string> = {};
 
-    protected _fallbackOrder: Array<string>;
+    protected _fallbackOrder: string[];
 
     protected _disabledValue: string;
 
-    protected _onSelect: (value: string) => void;
+    protected _onSelect: SelectHandler;
 
     protected _prefix = '';
 
@@ -396,8 +400,9 @@ class SelectInput extends Element implements IBindable, IFocusable {
             label.text = value;
             // Hide the create label if the value is invalid (in invalidOptions, empty, or whitespace-only).
             // Skip the empty/whitespace check if there's a createFn, as it may handle empty values (e.g., show a dialog).
-            const invalid = (this.invalidOptions && this.invalidOptions.indexOf(value) !== -1) ||
-                            (!this._createFn && (!value || value.trim() === ''));
+            const invalid =
+                (this.invalidOptions && this.invalidOptions.indexOf(value) !== -1) ||
+                (!this._createFn && (!value || value.trim() === ''));
             if (invalid) {
                 if (!container.hidden) {
                     container.hidden = true;
@@ -447,7 +452,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         return container;
     }
 
-    protected _convertSingleValue(value: any) {
+    protected _convertSingleValue(value: unknown) {
         if (value === null && this._allowNull) return value;
 
         if (this._type === 'string') {
@@ -460,7 +465,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
             if (!value) {
                 value = 0;
             } else {
-                value = parseInt(value, 10);
+                value = parseInt(value as string, 10);
             }
         } else if (this._type === 'boolean') {
             return !!value;
@@ -469,20 +474,20 @@ class SelectInput extends Element implements IBindable, IFocusable {
         return value;
     }
 
-    protected _convertValue(value: any) {
+    protected _convertValue(value: unknown) {
         if (value === null && this._allowNull) return value;
 
         if (this.multiSelect) {
             if (!Array.isArray(value)) return value;
 
-            return value.map(val => this._convertSingleValue(val));
+            return value.map((val) => this._convertSingleValue(val));
         }
 
         return this._convertSingleValue(value);
     }
 
     // Update our value with the specified selected option
-    protected _onSelectValue(value: any) {
+    protected _onSelectValue(value: unknown) {
         value = this._convertSingleValue(value);
 
         if (!this.multiSelect) {
@@ -492,7 +497,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
 
         if (this._values) {
             let dirty = false;
-            this._values.forEach((arr: any) => {
+            this._values.forEach((arr) => {
                 if (!arr) {
                     arr = [value];
                     dirty = true;
@@ -550,13 +555,14 @@ class SelectInput extends Element implements IBindable, IFocusable {
             if (labelTop < scrollTop) {
                 this._containerOptions.dom.scrollTop = labelTop;
             } else if (labelTop + this._labelHighlighted.height > this._containerOptions.height + scrollTop) {
-                this._containerOptions.dom.scrollTop = labelTop + this._labelHighlighted.height - this._containerOptions.height;
+                this._containerOptions.dom.scrollTop =
+                    labelTop + this._labelHighlighted.height - this._containerOptions.height;
             }
         }
     }
 
     // when the value is changed show the correct title
-    protected _onValueChange(value: any) {
+    protected _onValueChange(value: unknown) {
         if (!this.multiSelect) {
             this._labelValue.value = this._prefix + (this._valueToText[String(value)] || '');
 
@@ -595,21 +601,21 @@ class SelectInput extends Element implements IBindable, IFocusable {
         }
     }
 
-    protected _onMultipleValuesChange(values: any) {
+    protected _onMultipleValuesChange(values: unknown[][]) {
         this._labelValue.value = '';
         this._containerTags.clear();
         this._containerTags.class.add(CLASS_TAGS_EMPTY);
 
-        const tags: any = {};
-        const valueCounts: any = {};
-        values.forEach((arr: any) => {
+        const tags: Record<string, Container> = {};
+        const valueCounts: Record<string, number> = {};
+        values.forEach((arr) => {
             if (!arr) return;
-            arr.forEach((val: any) => {
-                if (!tags[val]) {
-                    tags[val] = this._addTag(val);
-                    valueCounts[val] = 1;
+            arr.forEach((val) => {
+                if (!tags[val as string]) {
+                    tags[val as string] = this._addTag(val);
+                    valueCounts[val as string] = 1;
                 } else {
-                    valueCounts[val]++;
+                    valueCounts[val as string]++;
                 }
             });
         });
@@ -633,9 +639,11 @@ class SelectInput extends Element implements IBindable, IFocusable {
             class: CLASS_TAG
         });
 
-        container.append(new Label({
-            text: this._valueToText[String(value)] || String(value)
-        }));
+        container.append(
+            new Label({
+                text: this._valueToText[String(value)] || String(value)
+            })
+        );
 
         const btnRemove = new Button({
             size: 'small',
@@ -655,8 +663,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
             label.class.add(CLASS_SELECTED);
         }
 
-        // @ts-expect-error
-        container.value = value;
+        (container as Container & { value: unknown }).value = value;
 
         return container;
     }
@@ -670,7 +677,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         }
 
         if (this._values) {
-            this._values.forEach((arr: unknown[]) => {
+            this._values.forEach((arr) => {
                 if (!arr) return;
                 const idx = arr.indexOf(value);
                 if (idx !== -1) {
@@ -691,7 +698,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         }
     }
 
-    protected _onInputChange = (value: any) => {
+    protected _onInputChange = (value: string) => {
         if (this._suspendInputChange) return;
 
         if (this._lastInputValue === value) return;
@@ -760,11 +767,11 @@ class SelectInput extends Element implements IBindable, IFocusable {
                 this.focus();
                 this.close();
 
-                if (this._valueToText[value]) {
+                if (this._valueToText[value as string]) {
                     this._onSelectValue(value);
                 } else if (this._allowCreate) {
                     if (this._createFn) {
-                        this._createFn(value);
+                        this._createFn(value as string);
                     } else {
                         this._onSelectValue(value);
                     }
@@ -904,7 +911,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
                 showInput = true;
                 focusInput = true;
             } else {
-                showInput = this.multiSelect || !this._valueToLabel[this.value];
+                showInput = this.multiSelect || !this._valueToLabel[this.value as string];
             }
         }
 
@@ -928,7 +935,6 @@ class SelectInput extends Element implements IBindable, IFocusable {
                 });
             }
         }
-
     }
 
     /**
@@ -991,7 +997,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         // if the dropdown list goes below the window show it above the field
         const startField = this._allowInput ? this._input.dom : this._labelValue.dom;
         const rect = startField.getBoundingClientRect();
-        let fitHeight = (rect.bottom + this._containerOptions.height + DEFAULT_BOTTOM_OFFSET >= window.innerHeight);
+        let fitHeight = rect.bottom + this._containerOptions.height + DEFAULT_BOTTOM_OFFSET >= window.innerHeight;
         if (fitHeight && rect.top - this._containerOptions.height < 0) {
             // if showing it above the field means that some of it will not be visible
             // then show it below instead and adjust the max height to the maximum available space
@@ -1060,7 +1066,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         }
     }
 
-    _updateValue(value: string) {
+    _updateValue(value: unknown) {
         if (value === this._value) return;
         this._value = value;
         this._onValueChange(value);
@@ -1074,7 +1080,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
         }
     }
 
-    _updateDisabledValue(value: string) {
+    _updateDisabledValue(value: unknown) {
         const labels: Record<string, Label> = {};
         this._containerOptions.forEachChild((child: Element) => {
             const label = child as Label;
@@ -1089,7 +1095,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
             label.class.remove(CLASS_DISABLED_VALUE);
         });
 
-        const disabledValue = this._disabledOptions[value] ? value : null;
+        const disabledValue = this._disabledOptions[value as string] ? value : null;
         let newValue = null;
         if (disabledValue) {
             if (this._fallbackOrder) {
@@ -1099,8 +1105,8 @@ class SelectInput extends Element implements IBindable, IFocusable {
                     break;
                 }
             }
-            this.disabledValue = disabledValue;
-            labels[disabledValue].class.add(CLASS_DISABLED_VALUE);
+            this.disabledValue = disabledValue as string;
+            labels[disabledValue as string].class.add(CLASS_DISABLED_VALUE);
         } else if (this._disabledValue) {
             newValue = this._disabledValue;
             this.disabledValue = null;
@@ -1205,7 +1211,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
      * Sets the options that should be disabled. The keys are the option values and the values are
      * the text to show when the option is disabled.
      */
-    set disabledOptions(value: any) {
+    set disabledOptions(value: Record<string, string>) {
         if (JSON.stringify(this._disabledOptions) === JSON.stringify(value)) return;
         this._disabledOptions = value || {};
         const newValue = this._updateDisabledValue(this._value);
@@ -1230,7 +1236,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
     /**
      * Sets the value of the SelectInput. For multi-select inputs, this should be an array.
      */
-    set value(value) {
+    set value(value: unknown) {
         this._values = null;
 
         this._suspendInputChange = true;
@@ -1245,7 +1251,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
 
         value = this._convertValue(value);
 
-        if (this._value === value || this.multiSelect && this._value && this._value.equals(value)) {
+        if (this._value === value || (this.multiSelect && this._value && (this._value as Comparable).equals(value))) {
             // if the value is null because we are showing multiple values
             // but someone wants to actually set the value of all observers to null
             // then make sure we do not return early
@@ -1268,10 +1274,9 @@ class SelectInput extends Element implements IBindable, IFocusable {
 
         // if multi-select then construct an array
         // value from the tags that are currently visible
-        const result: any = [];
+        const result: unknown[] = [];
         this._containerTags.dom.childNodes.forEach((dom) => {
-            // @ts-expect-error
-            result.push(dom.ui.value);
+            result.push((dom as unknown as Node & { ui: { value: unknown } }).ui.value);
         });
 
         return result;
@@ -1281,8 +1286,7 @@ class SelectInput extends Element implements IBindable, IFocusable {
      * Sets multiple values on the SelectInput. If all values are the same, the SelectInput will
      * display that value. Otherwise, it will display a "multiple values" state.
      */
-    /* eslint accessor-pairs: 0 */
-    set values(values: Array<any>) {
+    set values(values: unknown[]) {
         values = values.map((value) => {
             return this._convertValue(value);
         });
@@ -1294,18 +1298,18 @@ class SelectInput extends Element implements IBindable, IFocusable {
         this._values = null;
 
         for (let i = 1; i < values.length; i++) {
-            if (values[i] !== value && (!multiSelect || !values[i] || !values[i].equals(value))) {
+            if (values[i] !== value && (!multiSelect || !values[i] || !(values[i] as Comparable).equals(value))) {
                 different = true;
                 break;
             }
         }
 
         if (different) {
-            this._labelValue.values = values;
+            this._labelValue.values = values as string[];
 
             // show all different tags
             if (multiSelect) {
-                this._values = values;
+                this._values = values as unknown[][];
                 this._value = null;
                 this._onMultipleValuesChange(this._values);
                 this.emit('change', this.value);

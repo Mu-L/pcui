@@ -1,11 +1,12 @@
 import { Element } from '../Element/component';
 
-import { BooleanInput as BooleanInputClass, BooleanInputArgs } from './index';
+import type { BooleanInputArgs } from './index';
+import { BooleanInput as BooleanInputClass } from './index';
 
 /**
  * A checkbox element.
  */
-class BooleanInput extends Element<BooleanInputArgs, any> {
+class BooleanInput extends Element<BooleanInputArgs, object> {
     static ctor = BooleanInputClass;
 }
 

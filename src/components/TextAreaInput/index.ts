@@ -1,5 +1,6 @@
 import { Element } from '../Element';
-import { TextInput, TextInputArgs } from '../TextInput';
+import type { TextInputArgs } from '../TextInput';
+import { TextInput } from '../TextInput';
 
 const CLASS_TEXT_AREA_INPUT = 'pcui-text-area-input';
 const CLASS_TEXT_AREA_INPUT_RESIZABLE = `${CLASS_TEXT_AREA_INPUT}-resizable`;
@@ -16,7 +17,7 @@ interface TextAreaInputArgs extends TextInputArgs {
      * Sets which directions the text area can be resized in. One of 'both', 'horizontal',
      * 'vertical' or 'none'. Defaults to 'none'.
      */
-    resizable?: 'horizontal' | 'vertical' | 'both' | 'none'
+    resizable?: 'horizontal' | 'vertical' | 'both' | 'none';
 }
 
 /**
@@ -29,9 +30,12 @@ class TextAreaInput extends TextInput {
      * @param args - The arguments.
      */
     constructor(args: Readonly<TextAreaInputArgs> = {}) {
-        args = Object.assign({
-            input: document.createElement('textarea')
-        }, args);
+        args = Object.assign(
+            {
+                input: document.createElement('textarea')
+            },
+            args
+        );
 
         super(args);
 

@@ -1,11 +1,12 @@
 import { Element } from '../Element/component';
 
-import { ArrayInput as ArrayInputClass, ArrayInputArgs } from './index';
+import type { ArrayInputArgs } from './index';
+import { ArrayInput as ArrayInputClass } from './index';
 
 /**
  * Element that allows editing an array of values.
  */
-class ArrayInput extends Element<ArrayInputArgs, any> {
+class ArrayInput extends Element<ArrayInputArgs, object> {
     static ctor = ArrayInputClass;
 }
 

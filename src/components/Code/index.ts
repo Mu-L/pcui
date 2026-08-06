@@ -1,4 +1,5 @@
-import { Container, ContainerArgs } from '../Container';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
 import { Element } from '../Element';
 import { Label } from '../Label';
 
@@ -12,7 +13,7 @@ interface CodeArgs extends ContainerArgs {
     /**
      * Sets the text to display in the code block.
      */
-    text?: string
+    text?: string;
 }
 
 /**

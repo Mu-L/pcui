@@ -1,8 +1,9 @@
-import { Observer } from '@playcanvas/observer';
+import type { Observer } from '@playcanvas/observer';
 
 import { BindingObserversToElement } from '../../binding/BindingObserversToElement';
-import { Container, ContainerArgs } from '../Container';
-import { IFocusable } from '../Element';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
+import type { IFocusable } from '../Element';
 import { Label } from '../Label';
 import { RadioButton } from '../RadioButton';
 
@@ -75,8 +76,10 @@ class GridViewItem extends Container implements IFocusable {
                 binding: new BindingObserversToElement()
             });
 
-            // @ts-expect-error Remove radio button click event listener
-            this._radioButton.dom.removeEventListener('click', this._radioButton._onClick);
+            this._radioButton.dom.removeEventListener(
+                'click',
+                (this._radioButton as unknown as { _onClick: (evt: MouseEvent) => void })._onClick
+            );
             this._radioButton.dom.addEventListener('click', this._onRadioButtonClick);
 
             this.append(this._radioButton);
@@ -125,7 +128,7 @@ class GridViewItem extends Container implements IFocusable {
         this.dom.blur();
     }
 
-    link(observers: Observer|Observer[], paths: string|string[]) {
+    link(observers: Observer | Observer[], paths: string | string[]) {
         this._labelText.link(observers, paths);
     }
 

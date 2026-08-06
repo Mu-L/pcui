@@ -1,7 +1,15 @@
-import { Observer } from '@playcanvas/observer';
+import type { Observer } from '@playcanvas/observer';
 
 import { CLASS_FOCUS, CLASS_MULTIPLE_VALUES } from '../../class';
-import { Element, ElementArgs, IBindable, IBindableArgs, IFocusable, IMultiPlaceholder, IMultiPlaceholderArgs } from '../Element';
+import type {
+    ElementArgs,
+    IBindable,
+    IBindableArgs,
+    IFocusable,
+    IMultiPlaceholder,
+    IMultiPlaceholderArgs
+} from '../Element';
+import { Element } from '../Element';
 import { NumericInput } from '../NumericInput';
 
 const CLASS_VECTOR_INPUT = 'pcui-vector-input';
@@ -9,7 +17,7 @@ const CLASS_VECTOR_INPUT = 'pcui-vector-input';
 /**
  * The arguments for the {@link VectorInput} constructor.
  */
-interface VectorInputArgs extends ElementArgs, IBindableArgs, IMultiPlaceholderArgs {
+interface VectorInputArgs extends ElementArgs<number[]>, IBindableArgs<number[] | string>, IMultiPlaceholderArgs {
     /**
      * The number of dimensions in the vector. Can be between 2 to 4. Defaults to 3.
      */
@@ -39,7 +47,7 @@ interface VectorInputArgs extends ElementArgs, IBindableArgs, IMultiPlaceholderA
 /**
  * A vector input. The vector can have 2 to 4 dimensions with each dimension being a {@link NumericInput}.
  */
-class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceholder {
+class VectorInput extends Element implements IBindable<number[] | string>, IFocusable, IMultiPlaceholder {
     /**
      * Fired when the value of the VectorInput changes.
      *
@@ -112,7 +120,11 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
                 step: args.step ?? 1,
                 stepPrecision: args.stepPrecision,
                 renderChanges: args.renderChanges,
-                placeholder: args.placeholder ? (Array.isArray(args.placeholder) ? args.placeholder[i] : args.placeholder) : null
+                placeholder: args.placeholder
+                    ? Array.isArray(args.placeholder)
+                        ? args.placeholder[i]
+                        : args.placeholder
+                    : null
             });
             input.on('slider:mousedown', (evt: MouseEvent) => {
                 this._bindAllInputs = !!evt.altKey;
@@ -161,16 +173,15 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
         }
 
         if (args.value !== undefined) {
-            this.value = args.value;
+            this.value = args.value as number[];
         }
     }
-
 
     protected _onInputChange(input: NumericInput) {
         if (this._applyingChange) return;
 
         // check if any of our inputs have the MULTIPLE_VALUES class and if so inherit it for us as well
-        const multipleValues = this._inputs.some(input => input.class.contains(CLASS_MULTIPLE_VALUES));
+        const multipleValues = this._inputs.some((input) => input.class.contains(CLASS_MULTIPLE_VALUES));
 
         if (multipleValues) {
             this.class.add(CLASS_MULTIPLE_VALUES);
@@ -188,7 +199,6 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
         } else {
             this.emit('change', this.value);
         }
-
     }
 
     protected _updateValue(value: number[]) {
@@ -209,7 +219,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
                 applyingChange = binding.applyingChange;
                 binding.applyingChange = true;
             }
-            input.value = (value && value[i] !== undefined ? value[i] : null);
+            input.value = value && value[i] !== undefined ? value[i] : null;
             if (binding) {
                 binding.applyingChange = applyingChange;
             }
@@ -222,7 +232,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
         return true;
     }
 
-    link(observers: Observer|Observer[], paths: string|string[]) {
+    link(observers: Observer | Observer[], paths: string | string[]) {
         super.link(observers, paths);
         observers = Array.isArray(observers) ? observers : [observers];
         paths = Array.isArray(paths) ? paths : [paths];
@@ -236,9 +246,11 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
         } else {
             for (let i = 0; i < this._inputs.length; i++) {
                 // link observers to paths[i].i for each dimension
-                this._inputs[i].link(observers, paths.map(path => `${path}.${i}`));
+                this._inputs[i].link(
+                    observers,
+                    paths.map((path) => `${path}.${i}`)
+                );
             }
-
         }
     }
 
@@ -276,8 +288,8 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
                 value = JSON.parse(value);
                 // if the string could be converted to an array but some of its values aren't numbers
                 // then use a default array also
-                if (Array.isArray(value) && value.some(i => !Number.isFinite(i))) {
-                    throw new Error('VectorInput value set to string which doesn\'t contain an array of numbers');
+                if (Array.isArray(value) && value.some((i) => !Number.isFinite(i))) {
+                    throw new Error("VectorInput value set to string which doesn't contain an array of numbers");
                 }
             } catch (e) {
                 console.error(e);
@@ -299,7 +311,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
      * Gets the value of the VectorInput as an array of numbers.
      */
     get value() {
-        return this._inputs.map(input => input.value);
+        return this._inputs.map((input) => input.value);
     }
 
     /**
@@ -307,12 +319,13 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
      * vector dimensions. If all values are the same, the VectorInput will display that value.
      * Otherwise, it will display a "multiple values" state.
      */
-    /* eslint accessor-pairs: 0 */
-    set values(values: Array<any>) {
+    set values(values: number[][]) {
         // create an array for each dimension (e.g. one array for x one for y one for z)
-        values = this._inputs.map((_, i) => values.map((arr) => {
-            return arr ? arr[i] : undefined;
-        }));
+        values = this._inputs.map((_, i) =>
+            values.map((arr) => {
+                return arr ? arr[i] : undefined;
+            })
+        );
 
         this._inputs.forEach((input, i) => {
             input.values = values[i];
@@ -350,7 +363,7 @@ class VectorInput extends Element implements IBindable, IFocusable, IMultiPlaceh
      * Gets the placeholder text of all inputs as an array.
      */
     get placeholder(): string[] {
-        return this._inputs.map(input => input.placeholder);
+        return this._inputs.map((input) => input.placeholder);
     }
 
     /**

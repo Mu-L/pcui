@@ -1,9 +1,11 @@
+import type { EventHandle } from '@playcanvas/observer';
 import { CurveSet, Curve, math } from 'playcanvas';
 
 import { _hsv2rgb, _rgb2hsv } from '../../Math/color-value';
 import { Button } from '../Button';
 import { Canvas } from '../Canvas';
-import { Element, ElementArgs } from '../Element';
+import type { ElementArgs } from '../Element';
+import { Element } from '../Element';
 import { Label } from '../Label';
 import { NumericInput } from '../NumericInput';
 import { Overlay } from '../Overlay';
@@ -20,6 +22,48 @@ const CURVE_STEP = 5;
 const REGEX_KEYS = /keys/;
 const REGEX_TYPE = /type/;
 const CLASS_GRADIENT = 'pcui-gradient';
+
+type CurveData = { type: number; keys: number[][] };
+type Gradient = CurveData & { betweenCurves: boolean };
+type Helpers = {
+    rgbaStr: (color: number[], scale?: number) => string;
+    hexStr: (color: number[]) => string;
+    toHsva: (rgba: number[]) => number[];
+    toRgba: (hsva: number[]) => number[];
+    normalizedCoord: (canvas: Canvas, x: number, y: number) => number[];
+};
+type Ui = {
+    root: HTMLElement;
+    overlay: Overlay & { center: boolean };
+    panel: HTMLDivElement;
+    gradient: Canvas;
+    checkerPattern: CanvasPattern;
+    anchors: Canvas;
+    footer: Panel;
+    typeLabel: Label;
+    typeCombo: SelectInput;
+    positionLabel: Label;
+    positionEdit: NumericInput;
+    copyButton: Button;
+    pasteButton: Button;
+    deleteButton: Button;
+    showSelectedPosition: NumericInput;
+    showCrosshairPosition: HTMLDivElement;
+    anchorAddCrossHair: HTMLDivElement;
+    colorPicker: null;
+    draggingAnchor?: boolean;
+};
+type State = {
+    curves: Curve[];
+    keystore: number[][][];
+    anchors: number[];
+    hoveredAnchor: number;
+    selectedAnchor: number;
+    selectedValue: number[];
+    changing: boolean;
+    draggingAnchor: boolean;
+    typeMap: Record<number, number>;
+};
 
 /**
  * The arguments for the {@link GradientPicker} constructor.
@@ -83,25 +127,25 @@ class GradientPicker extends Element {
 
     protected _changing: boolean;
 
-    protected _copiedData: any;
+    protected _copiedData: CurveData;
 
     protected _channels: number;
 
-    protected _value: { type: number; keys: any[]; betweenCurves: boolean; };
+    protected _value: Gradient;
 
-    protected _evtPickerChanged: any;
+    protected _evtPickerChanged: EventHandle;
 
-    protected _evtRefreshPicker: any;
+    protected _evtRefreshPicker: EventHandle;
 
     protected renderChanges: boolean;
 
-    protected Helpers: any;
+    protected Helpers: Helpers;
 
-    protected CONSTANTS: any;
+    protected CONSTANTS: { bg: string; anchorRadius: number; selectedRadius: number };
 
-    protected UI: any;
+    protected UI: Ui;
 
-    protected STATE: any;
+    protected STATE: State;
 
     protected fieldChangeHandler: (evt: Event) => void;
 
@@ -164,36 +208,42 @@ class GradientPicker extends Element {
         }
 
         this.Helpers = {
-            rgbaStr: function (color: Array<number>, scale: number) {
+            rgbaStr: function (color: number[], scale?: number) {
                 if (!scale) {
                     scale = 1;
                 }
-                let rgba = color.map((element: number, index: number) => {
-                    return index < 3 ? Math.round(element * scale) : element;
-                }).join(',');
+                let rgba = color
+                    .map((element: number, index: number) => {
+                        return index < 3 ? Math.round(element * scale) : element;
+                    })
+                    .join(',');
                 for (let i = color.length; i < 4; ++i) {
                     rgba += `,${i < 3 ? scale : 1}`;
                 }
                 return `rgba(${rgba})`;
             },
 
-            hexStr: function (clr: Array<number>) {
-                return clr.map((v: { toString: (arg0: number) => string; }) => {
-                    return (`00${v.toString(16)}`).slice(-2).toUpperCase();
-                }).join('');
+            hexStr: function (clr: number[]) {
+                return clr
+                    .map((v) => {
+                        return `00${v.toString(16)}`.slice(-2).toUpperCase();
+                    })
+                    .join('');
             },
 
             // rgb(a) -> hsva
-            toHsva: function (rgba: Array<number>) {
-                const hsva = _rgb2hsv(rgba.map((v: number) => {
-                    return v * 255;
-                }));
+            toHsva: function (rgba: number[]) {
+                const hsva = _rgb2hsv(
+                    rgba.map((v: number) => {
+                        return v * 255;
+                    })
+                );
                 hsva.push(rgba.length > 3 ? rgba[3] : 1);
                 return hsva;
             },
 
             // hsv(1) -> rgba
-            toRgba: function (hsva: Array<number>) {
+            toRgba: function (hsva: number[]) {
                 const rgba = _hsv2rgb(hsva).map((v: number) => {
                     return v / 255;
                 });
@@ -204,10 +254,7 @@ class GradientPicker extends Element {
             // calculate the normalized coordinate [x,y] relative to rect
             normalizedCoord: function (canvas: Canvas, x: number, y: number) {
                 const rect = canvas.dom.getBoundingClientRect();
-                return [
-                    (x - rect.left) / rect.width,
-                    (y - rect.top) / rect.height
-                ];
+                return [(x - rect.left) / rect.width, (y - rect.top) / rect.height];
             }
         };
 
@@ -298,7 +345,7 @@ class GradientPicker extends Element {
 
         this.UI = {
             root: this.dom,
-            overlay: new Overlay(),
+            overlay: new Overlay() as Overlay & { center: boolean },
             panel: document.createElement('div'),
             gradient: new Canvas({ useDevicePixelRatio: true }),
             checkerPattern: this.createCheckerPattern(),
@@ -322,15 +369,15 @@ class GradientPicker extends Element {
 
         // current state
         this.STATE = {
-            curves: [],            // holds all the gradient curves (either 3 or 4 of them)
-            keystore: [],          // holds the curve during edit
-            anchors: [],           // holds the times of the anchors
-            hoveredAnchor: -1,     // index of the hovered anchor
-            selectedAnchor: -1,    // index of selected anchor
-            selectedValue: [],     // value being dragged
-            changing: false,       // UI is currently changing
+            curves: [], // holds all the gradient curves (either 3 or 4 of them)
+            keystore: [], // holds the curve during edit
+            anchors: [], // holds the times of the anchors
+            hoveredAnchor: -1, // index of the hovered anchor
+            selectedAnchor: -1, // index of selected anchor
+            selectedValue: [], // value being dragged
+            changing: false, // UI is currently changing
             draggingAnchor: false,
-            typeMap: { }          // map from curve type dropdown to engine curve enum
+            typeMap: {} // map from curve type dropdown to engine curve enum
         };
 
         // initialize overlay
@@ -414,13 +461,16 @@ class GradientPicker extends Element {
 
         this.UI.panel.append(this.UI.showSelectedPosition.dom);
         this.UI.showSelectedPosition.class.add('show-selected-position');
-        this.UI.showSelectedPosition._domInput.classList.add('show-selected-position-input');
+        this.UI.showSelectedPosition.input.classList.add('show-selected-position-input');
 
         const crosshairPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
         crosshairPath.setAttribute('fill-rule', 'evenodd');
         crosshairPath.setAttribute('clip-rule', 'evenodd');
-        crosshairPath.setAttribute('d', 'M8.5 17C7.35596 17 6.26043 16.7741 5.2134 16.3222C4.16637 15.8703 3.26152 15.2629 2.49882 14.4997C1.73612 13.7366 1.12899 12.8312 0.677391 11.7835C0.225795 10.7359 0 9.6397 0 8.49498C0 7.35026 0.225795 6.25409 0.677391 5.20644C1.12899 4.15879 1.73612 3.25507 2.49882 2.49527C3.26152 1.73548 4.16637 1.12965 5.2134 0.677791C6.26043 0.225928 7.35596 0 8.5 0C9.64404 0 10.7396 0.225928 11.7866 0.677791C12.8336 1.12965 13.7385 1.73548 14.5012 2.49527C15.2639 3.25507 15.871 4.15879 16.3226 5.20644C16.7742 6.25409 17 7.35026 17 8.49498C17 9.6397 16.7742 10.7359 16.3226 11.7835C15.871 12.8312 15.2639 13.7366 14.5012 14.4997C13.7385 15.2629 12.8336 15.8703 11.7866 16.3222C10.7396 16.7741 9.64404 17 8.5 17ZM8.5 2.2593C7.64364 2.2593 6.82576 2.42498 6.04634 2.75635C5.26692 3.08772 4.59622 3.53288 4.03424 4.09185C3.47225 4.65082 3.02568 5.31354 2.69451 6.08004C2.36334 6.84653 2.19776 7.6515 2.19776 8.49498C2.19776 9.6397 2.47875 10.6957 3.04073 11.663C3.60272 12.6303 4.36707 13.3952 5.33383 13.9575C6.30058 14.5198 7.35596 14.8009 8.5 14.8009C9.34298 14.8009 10.1475 14.6353 10.9135 14.3039C11.6796 13.9725 12.3419 13.5257 12.9005 12.9634C13.4592 12.4011 13.9041 11.73 14.2352 10.9501C14.5664 10.1702 14.732 9.35184 14.732 8.49498C14.732 7.6515 14.5664 6.84653 14.2352 6.08004C13.9041 5.31354 13.4592 4.65082 12.9005 4.09185C12.3419 3.53288 11.6796 3.08772 10.9135 2.75635C10.1475 2.42498 9.34298 2.2593 8.5 2.2593ZM9.52361 9.73007V12.9533H7.40614V9.73007H4.11452V7.61134H7.40614V4.31778H9.52361V7.61134H12.745V9.73007H9.52361Z');
+        crosshairPath.setAttribute(
+            'd',
+            'M8.5 17C7.35596 17 6.26043 16.7741 5.2134 16.3222C4.16637 15.8703 3.26152 15.2629 2.49882 14.4997C1.73612 13.7366 1.12899 12.8312 0.677391 11.7835C0.225795 10.7359 0 9.6397 0 8.49498C0 7.35026 0.225795 6.25409 0.677391 5.20644C1.12899 4.15879 1.73612 3.25507 2.49882 2.49527C3.26152 1.73548 4.16637 1.12965 5.2134 0.677791C6.26043 0.225928 7.35596 0 8.5 0C9.64404 0 10.7396 0.225928 11.7866 0.677791C12.8336 1.12965 13.7385 1.73548 14.5012 2.49527C15.2639 3.25507 15.871 4.15879 16.3226 5.20644C16.7742 6.25409 17 7.35026 17 8.49498C17 9.6397 16.7742 10.7359 16.3226 11.7835C15.871 12.8312 15.2639 13.7366 14.5012 14.4997C13.7385 15.2629 12.8336 15.8703 11.7866 16.3222C10.7396 16.7741 9.64404 17 8.5 17ZM8.5 2.2593C7.64364 2.2593 6.82576 2.42498 6.04634 2.75635C5.26692 3.08772 4.59622 3.53288 4.03424 4.09185C3.47225 4.65082 3.02568 5.31354 2.69451 6.08004C2.36334 6.84653 2.19776 7.6515 2.19776 8.49498C2.19776 9.6397 2.47875 10.6957 3.04073 11.663C3.60272 12.6303 4.36707 13.3952 5.33383 13.9575C6.30058 14.5198 7.35596 14.8009 8.5 14.8009C9.34298 14.8009 10.1475 14.6353 10.9135 14.3039C11.6796 13.9725 12.3419 13.5257 12.9005 12.9634C13.4592 12.4011 13.9041 11.73 14.2352 10.9501C14.5664 10.1702 14.732 9.35184 14.732 8.49498C14.732 7.6515 14.5664 6.84653 14.2352 6.08004C13.9041 5.31354 13.4592 4.65082 12.9005 4.09185C12.3419 3.53288 11.6796 3.08772 10.9135 2.75635C10.1475 2.42498 9.34298 2.2593 8.5 2.2593ZM9.52361 9.73007V12.9533H7.40614V9.73007H4.11452V7.61134H7.40614V4.31778H9.52361V7.61134H12.745V9.73007H9.52361Z'
+        );
         crosshairPath.setAttribute('fill', '#FF6600');
 
         const crosshairHolder = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -453,8 +503,7 @@ class GradientPicker extends Element {
         this._channels = args.channels ?? 3;
         this._value = this._getDefaultValue();
         if (args.value) {
-            // @ts-expect-error
-            this.value = args.value;
+            this.value = args.value as unknown as Gradient;
         }
     }
 
@@ -518,7 +567,7 @@ class GradientPicker extends Element {
     protected _getDefaultValue() {
         return {
             type: 4,
-            keys: (new Array(this._channels)).fill([0, 0]),
+            keys: new Array<number[]>(this._channels).fill([0, 0]),
             betweenCurves: false
         };
     }
@@ -539,7 +588,7 @@ class GradientPicker extends Element {
         this._evtRefreshPicker = this.on('change', () => this.setGradientPicker([this.value]));
     }
 
-    protected _onPickerChange(paths: string[], values: any[]) {
+    protected _onPickerChange(paths: string[], values: number[][] | number[]) {
         const value = this.value || this._getDefaultValue();
 
         // TODO: this is all kinda hacky. We need to clear up
@@ -548,13 +597,13 @@ class GradientPicker extends Element {
             // set new value with new keys but same type
             this.value = {
                 type: value.type,
-                keys: values,
+                keys: values as number[][],
                 betweenCurves: false
             };
         } else if (REGEX_TYPE.test(paths[0])) {
             // set new value with new type but same keys
             this.value = {
-                type: values[0],
+                type: values[0] as number,
                 keys: value.keys,
                 betweenCurves: false
             };
@@ -578,7 +627,7 @@ class GradientPicker extends Element {
             return;
         }
 
-        const rgba: any[] = [];
+        const rgba: number[] = [];
 
         const curve = this.channels === 1 ? new CurveSet([this.value.keys]) : new CurveSet(this.value.keys);
         curve.type = this.value.type;
@@ -593,7 +642,7 @@ class GradientPicker extends Element {
             const r = Math.round((rgba[0] || 0) * 255);
             const g = Math.round((rgba[1] || 0) * 255);
             const b = Math.round((rgba[2] || 0) * 255);
-            const a = this.channels === 4 ? (rgba[3] || 0) : 1;
+            const a = this.channels === 4 ? rgba[3] || 0 : 1;
 
             gradient.addColorStop(t / width, `rgba(${r}, ${g}, ${b}, ${a})`);
         }
@@ -644,7 +693,7 @@ class GradientPicker extends Element {
         return this._value;
     }
 
-    set values(values: any) { // eslint-disable-line accessor-pairs
+    set values(values: Gradient[]) {
         // we do not support multiple values so just
         // add the multiple values class which essentially disables
         // the input
@@ -698,12 +747,7 @@ class GradientPicker extends Element {
 
     protected _onFieldChanged() {
         if (!this._changing) {
-            const rgba = [
-                this._rField.value,
-                this._gField.value,
-                this._bField.value,
-                this._aField.value
-            ].map((v) => {
+            const rgba = [this._rField.value, this._gField.value, this._bField.value, this._aField.value].map((v) => {
                 return v / 255;
             });
             this.hsva = this.Helpers.toHsva(rgba);
@@ -714,11 +758,12 @@ class GradientPicker extends Element {
     protected _onHexChanged() {
         if (!this._changing) {
             const hex = this._hexField.value.trim().toLowerCase();
-            /* eslint-disable-next-line regexp/no-unused-capturing-group */
             if (/^([0-9a-f]{2}){3,4}$/.test(hex)) {
-                const rgb = [parseInt(hex.substring(0, 2), 16),
+                const rgb = [
+                    parseInt(hex.substring(0, 2), 16),
                     parseInt(hex.substring(2, 4), 16),
-                    parseInt(hex.substring(4, 6), 16)];
+                    parseInt(hex.substring(4, 6), 16)
+                ];
                 this.hsva = _rgb2hsv(rgb).concat([this.hsva[3]]);
                 this.colorSelectedAnchor(this.color);
             }
@@ -727,11 +772,11 @@ class GradientPicker extends Element {
 
     protected _onMouseDown(evt: MouseEvent) {
         if (evt.currentTarget === this._colorRect.dom) {
-            this._dragMode = 1;     // drag color
+            this._dragMode = 1; // drag color
         } else if (evt.currentTarget === this._hueRect.dom) {
-            this._dragMode = 2;     // drag hue
+            this._dragMode = 2; // drag hue
         } else {
-            this._dragMode = 3;     // drag alpha
+            this._dragMode = 3; // drag alpha
         }
 
         this._storeHsva = this._hsva.slice();
@@ -758,10 +803,12 @@ class GradientPicker extends Element {
             const a = math.clamp(m[1], 0, 1);
             newhsva = [this.hsva[0], this.hsva[1], this.hsva[2], 1 - a];
         }
-        if (newhsva[0] !== this._hsva[0] ||
+        if (
+            newhsva[0] !== this._hsva[0] ||
             newhsva[1] !== this._hsva[1] ||
             newhsva[2] !== this._hsva[2] ||
-            newhsva[3] !== this._hsva[3]) {
+            newhsva[3] !== this._hsva[3]
+        ) {
             this.hsva = newhsva;
             this.emit('changing', this.color);
         }
@@ -771,10 +818,12 @@ class GradientPicker extends Element {
         window.removeEventListener('mousemove', this.moveHandler);
         window.removeEventListener('mouseup', this.upHandler);
 
-        if (this._storeHsva[0] !== this._hsva[0] ||
+        if (
+            this._storeHsva[0] !== this._hsva[0] ||
             this._storeHsva[1] !== this._hsva[1] ||
             this._storeHsva[2] !== this._hsva[2] ||
-            this._storeHsva[3] !== this._hsva[3]) {
+            this._storeHsva[3] !== this._hsva[3]
+        ) {
             this.colorSelectedAnchor(this.color);
         }
     }
@@ -846,7 +895,7 @@ class GradientPicker extends Element {
         }
     }
 
-    get editAlpha(): any {
+    get editAlpha(): boolean {
         return this.editAlpha;
     }
 
@@ -894,8 +943,8 @@ class GradientPicker extends Element {
 
     protected _onTypeChanged(value: number) {
         value = this.STATE.typeMap[value];
-        const paths: any = [];
-        const values: any[] = [];
+        const paths: string[] = [];
+        const values: number[] = [];
         for (let i = 0; i < this.STATE.curves.length; ++i) {
             paths.push(`${i.toString()}.type`);
             values.push(value);
@@ -909,7 +958,7 @@ class GradientPicker extends Element {
     }
 
     renderGradient() {
-        const ctx = this.UI.gradient.dom.getContext('2d');
+        const ctx = (this.UI.gradient.dom as HTMLCanvasElement).getContext('2d');
         const w = this.UI.gradient.width;
         const h = this.UI.gradient.height;
         const r = this.UI.gradient.pixelRatio;
@@ -938,17 +987,14 @@ class GradientPicker extends Element {
             const rectHeight = this.UI.draggingAnchor ? -30 : -6;
 
             ctx.beginPath();
-            ctx.rect(coords[0] - 0.5,
-                coords[1],
-                1,
-                rectHeight);
+            ctx.rect(coords[0] - 0.5, coords[1], 1, rectHeight);
             ctx.fillStyle = 'rgb(41, 53, 56)';
             ctx.fill();
         }
     }
 
     renderAnchors() {
-        const ctx = this.UI.anchors.dom.getContext('2d');
+        const ctx = (this.UI.anchors.dom as HTMLCanvasElement).getContext('2d');
         const w = this.UI.anchors.width;
         const h = this.UI.anchors.height;
         const r = this.UI.anchors.pixelRatio;
@@ -960,15 +1006,12 @@ class GradientPicker extends Element {
 
         // render plain anchors
         for (let index = 0; index < this.STATE.anchors.length; ++index) {
-
-            if (index !== this.STATE.hoveredAnchor &&
-                index !== this.STATE.selectedAnchor) {
+            if (index !== this.STATE.hoveredAnchor && index !== this.STATE.selectedAnchor) {
                 this.renderAnchor(ctx, this.STATE.anchors[index]);
             }
         }
 
-        if ((this.STATE.hoveredAnchor !== -1) &&
-            (this.STATE.hoveredAnchor !== this.STATE.selectedAnchor)) {
+        if (this.STATE.hoveredAnchor !== -1 && this.STATE.hoveredAnchor !== this.STATE.selectedAnchor) {
             this.renderAnchor(ctx, this.STATE.anchors[this.STATE.hoveredAnchor], 'hovered');
         }
 
@@ -979,16 +1022,12 @@ class GradientPicker extends Element {
 
     renderAnchor(ctx: CanvasRenderingContext2D, time: number, type?: string) {
         const coords = [time * this.UI.anchors.width, this.UI.anchors.height / 2];
-        const radius = (type === 'selected' ? this.CONSTANTS.selectedRadius : this.CONSTANTS.anchorRadius);
+        const radius = type === 'selected' ? this.CONSTANTS.selectedRadius : this.CONSTANTS.anchorRadius;
 
         // render selected arrow
         if (type === 'selected') {
-
             ctx.beginPath();
-            ctx.rect(coords[0] - 0.5,
-                coords[1],
-                1,
-                -coords[1]);
+            ctx.rect(coords[0] - 0.5, coords[1], 1, -coords[1]);
             ctx.fillStyle = 'rgb(41, 53, 56)';
             ctx.fill();
         }
@@ -996,19 +1035,19 @@ class GradientPicker extends Element {
         // render selection highlight
         if (type === 'selected' || type === 'hovered') {
             ctx.beginPath();
-            ctx.arc(coords[0], coords[1], (radius + 2), 0, 2 * Math.PI, false);
+            ctx.arc(coords[0], coords[1], radius + 2, 0, 2 * Math.PI, false);
             ctx.fillStyle = 'rgb(255, 255, 255)';
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(coords[0], coords[1], (radius + 1), 0, 2 * Math.PI, false);
+        ctx.arc(coords[0], coords[1], radius + 1, 0, 2 * Math.PI, false);
         ctx.fillStyle = this.Helpers.rgbaStr(this.evaluateGradient(time, 1), 255);
         ctx.fill();
     }
 
     evaluateGradient(time: number, alphaOverride?: number) {
-        const result: any = [];
+        const result: number[] = [];
         for (let i = 0; i < 3; ++i) {
             result.push(this.STATE.curves[i].value(time));
         }
@@ -1026,7 +1065,7 @@ class GradientPicker extends Element {
 
     calcAnchorTimes() {
         // get curve anchor points
-        let times: any = [];
+        let times: number[] = [];
         for (let i = 0; i < this.STATE.curves.length; i++) {
             const curve = this.STATE.curves[i];
             for (let j = 0; j < curve.keys.length; ++j) {
@@ -1046,8 +1085,7 @@ class GradientPicker extends Element {
     // helper function for calculating the normalized coordinate
     // x,y relative to rect
     calcNormalizedCoord(x: number, y: number, rect: DOMRect) {
-        return [(x - rect.left) / rect.width,
-            (y - rect.top) / rect.height];
+        return [(x - rect.left) / rect.width, (y - rect.top) / rect.height];
     }
 
     // get the bounding client rect minus padding
@@ -1061,18 +1099,18 @@ class GradientPicker extends Element {
 
         const rect = element.getBoundingClientRect();
 
-        return new DOMRect(rect.x + paddingLeft,
+        return new DOMRect(
+            rect.x + paddingLeft,
             rect.y + paddingTop,
             rect.width - paddingRight - paddingLeft,
-            rect.height - paddingTop - paddingBottom);
+            rect.height - paddingTop - paddingBottom
+        );
     }
 
     protected _onAnchorsMouseDown = (e: MouseEvent) => {
         if (this.STATE.hoveredAnchor === -1) {
             // user clicked in empty space, create new anchor and select it
-            const coord = this.calcNormalizedCoord(e.clientX,
-                e.clientY,
-                this.getClientRect(this.UI.anchors.dom));
+            const coord = this.calcNormalizedCoord(e.clientX, e.clientY, this.getClientRect(this.UI.anchors.dom));
             this.insertAnchor(coord[0], this.evaluateGradient(coord[0]));
             this.STATE.anchors = this.calcAnchorTimes();
             this.selectAnchor(this.STATE.anchors.indexOf(coord[0]));
@@ -1090,17 +1128,12 @@ class GradientPicker extends Element {
     };
 
     protected _onAnchorsMouseMove = (e: MouseEvent) => {
-        const coord = this.calcNormalizedCoord(e.clientX,
-            e.clientY,
-            this.getClientRect(this.UI.anchors.dom));
+        const coord = this.calcNormalizedCoord(e.clientX, e.clientY, this.getClientRect(this.UI.anchors.dom));
 
         if (this.UI.draggingAnchor) {
             this.dragUpdate(math.clamp(coord[0], 0, 1));
             this.UI.anchorAddCrossHair.style.visibility = 'hidden';
-        } else if (coord[0] >= 0 &&
-                   coord[0] <= 1 &&
-                   coord[1] >= 0 &&
-                   coord[1] <= 1) {
+        } else if (coord[0] >= 0 && coord[0] <= 1 && coord[1] >= 0 && coord[1] <= 1) {
             let closest = -1;
             let closestDist = 0;
             for (let index = 0; index < this.STATE.anchors.length; ++index) {
@@ -1111,7 +1144,7 @@ class GradientPicker extends Element {
                 }
             }
 
-            const hoveredAnchor = (closest !== -1 && closestDist < 0.02) ? closest : -1;
+            const hoveredAnchor = closest !== -1 && closestDist < 0.02 ? closest : -1;
             if (hoveredAnchor !== this.STATE.hoveredAnchor) {
                 this.selectHovered(hoveredAnchor);
                 this.render();
@@ -1124,11 +1157,9 @@ class GradientPicker extends Element {
                 this.UI.anchorAddCrossHair.style.visibility = 'hidden';
             }
 
-
-            this.UI.showCrosshairPosition.innerText = (Math.round(coord[0] * 100)).toString();
+            this.UI.showCrosshairPosition.innerText = Math.round(coord[0] * 100).toString();
 
             this.UI.anchorAddCrossHair.style.left = `${(2.5 + 320 * coord[0]).toString()}px`;
-
         } else if (this.STATE.hoveredAnchor !== -1) {
             this.UI.anchorAddCrossHair.style.visibility = 'hidden';
             this.selectHovered(-1);
@@ -1149,7 +1180,7 @@ class GradientPicker extends Element {
 
     selectHovered(index: number) {
         this.STATE.hoveredAnchor = index;
-        this.UI.anchors.dom.style.cursor = (index === -1 ? '' : 'pointer');
+        this.UI.anchors.dom.style.cursor = index === -1 ? '' : 'pointer';
     }
 
     selectAnchor(index: number) {
@@ -1178,8 +1209,8 @@ class GradientPicker extends Element {
         // make a copy of the curve data before editing starts
         this.STATE.keystore = [];
         for (let i = 0; i < this.STATE.curves.length; ++i) {
-            const keys: any[][] = [];
-            this.STATE.curves[i].keys.forEach((element: any[]) => {
+            const keys: number[][] = [];
+            this.STATE.curves[i].keys.forEach((element: number[]) => {
                 if (element[0] !== time) {
                     keys.push([element[0], element[1]]);
                 }
@@ -1198,12 +1229,13 @@ class GradientPicker extends Element {
 
             // merge keystore with the drag anchor (ignoring existing anchors at
             // the current anchor location)
-            curve.keys = keystore.map((element: any[]) => {
-                return [element[0], element[1]];
-            })
-            .filter((element: any[]) => {
-                return element[0] !== time;
-            });
+            curve.keys = keystore
+                .map((element: number[]) => {
+                    return [element[0], element[1]];
+                })
+                .filter((element: number[]) => {
+                    return element[0] !== time;
+                });
             curve.keys.push([time, this.STATE.selectedValue[i]]);
             curve.sort();
         }
@@ -1219,7 +1251,7 @@ class GradientPicker extends Element {
     }
 
     // insert an anchor at the given time with the given color
-    insertAnchor(time: number, color: any[]) {
+    insertAnchor(time: number, color: number[]) {
         for (let i = 0; i < this.STATE.curves.length; ++i) {
             const keys = this.STATE.curves[i].keys;
 
@@ -1289,11 +1321,11 @@ class GradientPicker extends Element {
 
     emitCurveChange() {
         const paths: string[] = [];
-        const values: any[][] = [];
-        this.STATE.curves.forEach((curve: any, index: number) => {
+        const values: number[][] = [];
+        this.STATE.curves.forEach((curve: Curve, index: number) => {
             paths.push(`0.keys.${index}`);
-            const keys: any[] = [];
-            curve.keys.forEach((key: any[]) => {
+            const keys: number[] = [];
+            curve.keys.forEach((key: number[]) => {
                 keys.push(key[0], key[1]);
             });
             values.push(keys);
@@ -1315,7 +1347,7 @@ class GradientPicker extends Element {
         const data = this._copiedData;
         if (data !== null) {
             // only paste the number of curves we're currently editing
-            const pasteData: any = {
+            const pasteData: CurveData = {
                 type: data.type,
                 keys: []
             };
@@ -1346,7 +1378,6 @@ class GradientPicker extends Element {
             keys.splice(toDelete, 1);
         }
 
-
         this.emitCurveChange();
     }
 
@@ -1366,12 +1397,14 @@ class GradientPicker extends Element {
         return ctx.createPattern(canvasElement, 'repeat');
     }
 
-    setValue(value: any, args?: any) {
+    setValue(value: CurveData[], args?: { channels?: number }) {
         // sanity checks mostly for script 'curve' attributes
-        if (!(value instanceof Array) ||
+        if (
+            !(value instanceof Array) ||
             value.length !== 1 ||
             value[0].keys === undefined ||
-            (value[0].keys.length !== 3 && value[0].keys.length !== 4)) {
+            (value[0].keys.length !== 3 && value[0].keys.length !== 4)
+        ) {
             return;
         }
 
@@ -1387,24 +1420,22 @@ class GradientPicker extends Element {
             1: CURVE_LINEAR,
             2: CURVE_SPLINE
         };
-        const indexMap = Object.fromEntries(
-            Object
-            .entries(this.STATE.typeMap)
-            .map(([key, value]) => [value, key])
-        );
+        const indexMap = Object.fromEntries(Object.entries(this.STATE.typeMap).map(([key, value]) => [value, key]));
         // check if curve is using a legacy curve type
-        if (value[0].type !== CURVE_STEP &&
-            value[0].type !== CURVE_LINEAR &&
-            value[0].type !== CURVE_SPLINE) {
+        if (value[0].type !== CURVE_STEP && value[0].type !== CURVE_LINEAR && value[0].type !== CURVE_SPLINE) {
             comboItems[3] = 'Legacy';
             this.STATE.typeMap[3] = value[0].type;
         }
-        this.UI.typeCombo.options = [{ v: 0, t: 'Step' }, { v: 1, t: 'Linear' }, { v: 2, t: 'Spline' }];
+        this.UI.typeCombo.options = [
+            { v: 0, t: 'Step' },
+            { v: 1, t: 'Linear' },
+            { v: 2, t: 'Spline' }
+        ];
         this.UI.typeCombo.value = this.UI.typeCombo.value === -1 ? indexMap[this.value.type] : this.UI.typeCombo.value;
 
         // store the curves
         this.STATE.curves = [];
-        value[0].keys.forEach((keys: any) => {
+        value[0].keys.forEach((keys: number[]) => {
             const curve = new Curve(keys);
             curve.type = value[0].type;
             this.STATE.curves.push(curve);
@@ -1423,7 +1454,7 @@ class GradientPicker extends Element {
         this.editAlpha = this.STATE.curves.length > 3;
     }
 
-    callOpenGradientPicker(value: any, args?: any) {
+    callOpenGradientPicker(value: CurveData[], args?: { channels?: number }) {
         this.setValue(value, args);
         this.open();
     }
@@ -1439,7 +1470,7 @@ class GradientPicker extends Element {
         this.UI.overlay.position(x, y);
     }
 
-    setGradientPicker(value: any, args?: any) {
+    setGradientPicker(value: CurveData[], args?: { channels?: number }) {
         this.setValue(value, args);
     }
 }

@@ -1,6 +1,7 @@
 import { CLASS_FONT_REGULAR } from '../../class';
-import { Container, ContainerArgs } from '../Container';
-import { Element } from '../Element';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
+import type { Element } from '../Element';
 import { Label } from '../Label';
 import { TextInput } from '../TextInput';
 import type { TreeView } from '../TreeView';
@@ -14,6 +15,24 @@ const CLASS_CONTENTS = `${CLASS_ROOT}-contents`;
 const CLASS_EMPTY = `${CLASS_ROOT}-empty`;
 const CLASS_RENAME = `${CLASS_ROOT}-rename`;
 
+type TreeApi = {
+    allowDrag: boolean;
+    allowRenaming: boolean;
+    deselect: () => void;
+    _onAppendTreeViewItem: (item: TreeViewItem) => void;
+    _onRemoveTreeViewItem: (item: TreeViewItem) => void;
+    _onChildKeyDown: (evt: KeyboardEvent, item: TreeViewItem) => void;
+    _updateModifierKeys: (evt: KeyboardEvent | MouseEvent) => void;
+    _onChildDragEnd: (evt: MouseEvent, item: TreeViewItem) => void;
+    _onChildDragOver: (evt: MouseEvent, item: TreeViewItem) => void;
+    _onChildDragStart: (evt: MouseEvent, item: TreeViewItem) => void;
+    _onChildClick: (evt: MouseEvent, item: TreeViewItem) => void;
+    _onContextMenu?: (evt: MouseEvent, item: TreeViewItem) => void;
+    _onChildSelected: (item: TreeViewItem) => void;
+    _onChildDeselected: (item: TreeViewItem) => void;
+    _onChildRename: (item: TreeViewItem, value: string) => void;
+};
+
 /**
  * The arguments for the {@link TreeViewItem} constructor.
  */
@@ -25,36 +44,36 @@ interface TreeViewItemArgs extends ContainerArgs {
     /**
      * Whether the item can be selected. Defaults to `true`.
      */
-    allowSelect?: boolean,
+    allowSelect?: boolean;
     /**
      * Whether the item is open (showing its children). Defaults to `false`.
      */
-    open?: boolean,
+    open?: boolean;
     /**
      * Whether this {@link TreeViewItem} can be dragged. Only considered if the parent {@link TreeView}
      * has `allowDrag` set to `true`. Defaults to `true`.
      */
-    allowDrag?: boolean,
+    allowDrag?: boolean;
     /**
      * Whether dropping is allowed on the {@link TreeViewItem}. Defaults to `true`.
      */
-    allowDrop?: boolean,
+    allowDrop?: boolean;
     /**
      * The text shown by the {@link TreeViewItem}.
      */
-    text?: string,
+    text?: string;
     /**
      * The icon shown before the text in the {@link TreeViewItem}. Defaults to 'E360'.
      */
-    icon?: string,
+    icon?: string;
     /**
      * Method to be called when the {@link TreeViewItem} is selected.
      */
-    onSelect?: (deselect: () => void) => void,
+    onSelect?: (deselect: () => void) => void;
     /**
      * Method to be called when the {@link TreeViewItem} is deselected.
      */
-    onDeselect?: () => void
+    onDeselect?: () => void;
 }
 
 /**
@@ -137,7 +156,7 @@ class TreeViewItem extends Container {
 
     protected _numChildren = 0;
 
-    protected _treeView: any;
+    protected _treeView: TreeApi;
 
     protected _icon: string;
 
@@ -539,14 +558,14 @@ class TreeViewItem extends Container {
      * Sets the parent {@link TreeView}.
      */
     set treeView(value: TreeView | null) {
-        this._treeView = value;
+        this._treeView = value as unknown as TreeApi;
     }
 
     /**
      * Gets the parent {@link TreeView}.
      */
     get treeView(): TreeView | null {
-        return this._treeView;
+        return this._treeView as unknown as TreeView;
     }
 
     /**
@@ -595,7 +614,7 @@ class TreeViewItem extends Container {
             sibling = sibling.nextSibling;
         }
 
-        return sibling && sibling.ui as TreeViewItem;
+        return sibling && (sibling.ui as TreeViewItem);
     }
 
     /**
@@ -607,7 +626,7 @@ class TreeViewItem extends Container {
             sibling = sibling.previousSibling;
         }
 
-        return sibling && sibling.ui as TreeViewItem;
+        return sibling && (sibling.ui as TreeViewItem);
     }
 
     /**

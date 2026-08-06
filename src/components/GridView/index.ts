@@ -1,7 +1,8 @@
-import { EventHandle } from '@playcanvas/observer';
+import type { EventHandle } from '@playcanvas/observer';
 
-import { Container, ContainerArgs } from '../Container';
-import { Element } from '../Element';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
+import type { Element } from '../Element';
 import { GridViewItem } from '../GridViewItem';
 
 const CLASS_ROOT = 'pcui-gridview';
@@ -131,9 +132,9 @@ class GridView extends Container {
 
         let evtClick: EventHandle;
         if (this._clickFn) {
-            evtClick = item.on('click', evt => this._clickFn(evt, item));
+            evtClick = item.on('click', (evt) => this._clickFn(evt, item));
         } else {
-            evtClick = item.on('click', evt => this._onClickItem(evt, item));
+            evtClick = item.on('click', (evt) => this._onClickItem(evt, item));
         }
         let evtSelect = item.on('select', () => this._onSelectItem(item));
 
@@ -243,8 +244,8 @@ class GridView extends Container {
         let targetElement: HTMLElement = element;
         let item: GridViewItem | null = null;
         while (targetElement && targetElement !== this.dom) {
-            if ((targetElement as any).ui instanceof GridViewItem) {
-                item = (targetElement as any).ui;
+            if (targetElement.ui instanceof GridViewItem) {
+                item = targetElement.ui;
                 break;
             }
             targetElement = targetElement.parentElement;
@@ -265,17 +266,33 @@ class GridView extends Container {
 
         if (this._vertical) {
             switch (evt.key) {
-                case 'ArrowUp': target = item.previousSibling; break;
-                case 'ArrowDown': target = item.nextSibling; break;
-                case 'ArrowLeft': target = this._findItemInAdjacentRow(item, -1); break;
-                case 'ArrowRight': target = this._findItemInAdjacentRow(item, 1); break;
+                case 'ArrowUp':
+                    target = item.previousSibling;
+                    break;
+                case 'ArrowDown':
+                    target = item.nextSibling;
+                    break;
+                case 'ArrowLeft':
+                    target = this._findItemInAdjacentRow(item, -1);
+                    break;
+                case 'ArrowRight':
+                    target = this._findItemInAdjacentRow(item, 1);
+                    break;
             }
         } else {
             switch (evt.key) {
-                case 'ArrowLeft': target = item.previousSibling; break;
-                case 'ArrowRight': target = item.nextSibling; break;
-                case 'ArrowUp': target = this._findItemInAdjacentRow(item, -1); break;
-                case 'ArrowDown': target = this._findItemInAdjacentRow(item, 1); break;
+                case 'ArrowLeft':
+                    target = item.previousSibling;
+                    break;
+                case 'ArrowRight':
+                    target = item.nextSibling;
+                    break;
+                case 'ArrowUp':
+                    target = this._findItemInAdjacentRow(item, -1);
+                    break;
+                case 'ArrowDown':
+                    target = this._findItemInAdjacentRow(item, 1);
+                    break;
             }
         }
 
@@ -289,8 +306,8 @@ class GridView extends Container {
         let targetElement = evt.target as HTMLElement;
         let item: GridViewItem | null = null;
         while (targetElement && targetElement !== this.dom) {
-            if ((targetElement as any).ui instanceof GridViewItem) {
-                item = (targetElement as any).ui;
+            if (targetElement.ui instanceof GridViewItem) {
+                item = targetElement.ui;
                 break;
             }
             targetElement = targetElement.parentElement;
@@ -351,7 +368,10 @@ class GridView extends Container {
 
             const prevPos = (lastInPrevRow.dom as HTMLElement)[positionProp];
             firstInRow = lastInPrevRow;
-            while (firstInRow.previousSibling && (firstInRow.previousSibling.dom as HTMLElement)[positionProp] === prevPos) {
+            while (
+                firstInRow.previousSibling &&
+                (firstInRow.previousSibling.dom as HTMLElement)[positionProp] === prevPos
+            ) {
                 firstInRow = firstInRow.previousSibling;
             }
         }
@@ -379,7 +399,7 @@ class GridView extends Container {
 
         const children = this.dom.children;
         for (let i = 0; i < children.length; i++) {
-            const child = (children[i] as any).ui;
+            const child = children[i].ui;
             if (child instanceof GridViewItem && !child.hidden) {
                 this._setActiveItem(child);
                 return;

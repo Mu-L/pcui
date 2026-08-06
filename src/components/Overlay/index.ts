@@ -1,5 +1,6 @@
 import { Container } from '../Container';
-import { Element, ElementArgs } from '../Element';
+import type { ElementArgs } from '../Element';
+import { Element } from '../Element';
 
 const CLASS_OVERLAY = 'pcui-overlay';
 const CLASS_OVERLAY_INNER = `${CLASS_OVERLAY}-inner`;
@@ -14,11 +15,11 @@ interface OverlayArgs extends ElementArgs {
     /**
      * Whether the overlay can be hidden by clicking on it.
      */
-    clickable?: boolean,
+    clickable?: boolean;
     /**
      * Whether the overlay is transparent or not.
      */
-    transparent?: boolean,
+    transparent?: boolean;
 }
 
 /**

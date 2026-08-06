@@ -1,6 +1,7 @@
-import { Events, History, Observer } from '@playcanvas/observer';
+import type { History, Observer } from '@playcanvas/observer';
+import { Events } from '@playcanvas/observer';
 
-import { IBindable } from '../../components/Element';
+import type { IBindable } from '../../components/Element';
 
 /**
  * The interface for arguments for the {@link BindingBase} constructor.
@@ -9,28 +10,28 @@ export interface BindingBaseArgs {
     /**
      * The IBindable element.
      */
-    element?: IBindable,
+    element?: IBindable;
     /**
      * The history object which will be used to record undo / redo actions.
      * If none is provided then no history will be recorded.
      */
-    history?: History,
+    history?: History;
     /**
      * A prefix that will be used for the name of every history action.
      */
-    historyPrefix?: string,
+    historyPrefix?: string;
     /**
      * A postfix that will be used for the name of every history action.
      */
-    historyPostfix?: string,
+    historyPostfix?: string;
     /**
      * The name of each history action.
      */
-    historyName?: string,
+    historyName?: string;
     /**
      * Whether to combine history actions.
      */
-    historyCombine?: boolean
+    historyCombine?: boolean;
 }
 
 /**
@@ -89,7 +90,7 @@ class BindingBase extends Events {
      * If more observers than paths are passed then the path at index 0 will be used for all observers.
      * If one observer and multiple paths are passed then all of the paths will be used for the observer (e.g. for curves).
      */
-    link(observers: Observer|Observer[], paths: string|string[]) {
+    link(observers: Observer | Observer[], paths: string | string[]) {
         if (this._observers) {
             this.unlink();
         }
@@ -121,7 +122,8 @@ class BindingBase extends Events {
      *
      * @param value - The value
      */
-    setValue(value: any) {
+    setValue(value: unknown) {
+        // implemented by derived classes
     }
 
     /**
@@ -129,7 +131,8 @@ class BindingBase extends Events {
      *
      * @param values - The values.
      */
-    setValues(values: any[]) {
+    setValues(values: unknown[]) {
+        // implemented by derived classes
     }
 
     /**
@@ -137,7 +140,8 @@ class BindingBase extends Events {
      *
      * @param value - The value.
      */
-    addValue(value: any) {
+    addValue(value: unknown) {
+        // implemented by derived classes
     }
 
     /**
@@ -145,7 +149,8 @@ class BindingBase extends Events {
      *
      * @param values - The values.
      */
-    addValues(values: any[]) {
+    addValues(values: unknown[]) {
+        // implemented by derived classes
     }
 
     /**
@@ -153,7 +158,8 @@ class BindingBase extends Events {
      *
      * @param value - The value.
      */
-    removeValue(value: any) {
+    removeValue(value: unknown) {
+        // implemented by derived classes
     }
 
     /**
@@ -161,7 +167,8 @@ class BindingBase extends Events {
      *
      * @param values - The values.
      */
-    removeValues(values: any[]) {
+    removeValues(values: unknown[]) {
+        // implemented by derived classes
     }
 
     /**
@@ -264,8 +271,7 @@ class BindingBase extends Events {
      */
     set historyEnabled(value) {
         if (this._history) {
-            // @ts-expect-error
-            this._history.enabled = value;
+            (this._history as History & { enabled: boolean }).enabled = value;
         }
     }
 
@@ -273,8 +279,7 @@ class BindingBase extends Events {
      * Gets whether history is enabled for the binding.
      */
     get historyEnabled() {
-        // @ts-expect-error
-        return this._history && this._history.enabled;
+        return this._history && (this._history as History & { enabled: boolean }).enabled;
     }
 
     /**

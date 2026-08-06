@@ -1,4 +1,5 @@
-import { Container, ContainerArgs } from '../Container';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
 import { Element } from '../Element';
 
 const CLASS_ROOT = 'pcui-progress';
@@ -11,7 +12,7 @@ interface ProgressArgs extends ContainerArgs {
     /**
      * Sets the value of the progress bar (between 0 and 100).
      */
-    value?: number
+    value?: number;
 }
 
 /**

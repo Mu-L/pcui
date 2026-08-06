@@ -1,11 +1,12 @@
 import { Element } from '../Element/component';
 
-import { VectorInput as VectorInputClass, VectorInputArgs } from './index';
+import type { VectorInputArgs } from './index';
+import { VectorInput as VectorInputClass } from './index';
 
 /**
  * A vector input.
  */
-class VectorInput extends Element<VectorInputArgs, any> {
+class VectorInput extends Element<VectorInputArgs, object> {
     static ctor = VectorInputClass;
 }
 

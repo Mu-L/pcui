@@ -1,4 +1,5 @@
-import { Element, ElementArgs } from '../Element';
+import type { ElementArgs } from '../Element';
+import { Element } from '../Element';
 
 const CLASS_ROOT = 'pcui-canvas';
 
@@ -88,7 +89,6 @@ class Canvas extends Element {
     get width(): number {
         return this._width;
     }
-
 
     /**
      * Sets the height of the canvas.

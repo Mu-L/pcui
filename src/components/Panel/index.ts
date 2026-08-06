@@ -1,6 +1,7 @@
 import { CLASS_COLLAPSED, CLASS_COLLAPSIBLE, CLASS_FONT_BOLD } from '../../class';
 import { Button } from '../Button';
-import { Container, ContainerArgs } from '../Container';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
 import { Element } from '../Element';
 import { Label } from '../Label';
 
@@ -19,43 +20,43 @@ interface PanelArgs extends ContainerArgs {
     /**
      * Sets whether the Element is collapsible.
      */
-    collapsible?: boolean,
+    collapsible?: boolean;
     /**
      * Sets whether the Element should be collapsed.
      */
-    collapsed?: boolean,
+    collapsed?: boolean;
     /**
      * Sets whether the panel can be reordered.
      */
-    sortable?: boolean,
+    sortable?: boolean;
     /**
      * Sets whether the panel collapses horizontally - this would be the case for side panels. Defaults to `false`.
      */
-    collapseHorizontally?: boolean,
+    collapseHorizontally?: boolean;
     /**
      * Sets whether the panel can be removed.
      */
-    removable?: boolean,
+    removable?: boolean;
     /**
      * The height of the header in pixels. Defaults to 32.
      */
-    headerSize?: number,
+    headerSize?: number;
     /**
      * The header text of the panel. Defaults to the empty string.
      */
-    headerText?: string,
+    headerText?: string;
     /**
      * Sets the panel type.
      */
-    panelType?: 'normal',
+    panelType?: 'normal';
     /**
      * A DOM element to use for the content container.
      */
-    content?: HTMLElement
+    content?: HTMLElement;
     /**
      * A DOM element to use for the header container.
      */
-    header?: HTMLElement
+    header?: HTMLElement;
 }
 
 /**
@@ -320,19 +321,15 @@ class Panel extends Container {
         window.addEventListener('mousemove', this._onDragMove);
 
         this.emit('dragstart');
-        // @ts-expect-error accessing protected methods
-        if (this.parent && this.parent._onChildDragStart) {
-            // @ts-expect-error accessing protected methods
-            this.parent._onChildDragStart(evt, this);
+        if (this.parent && (this.parent as Panel)._onChildDragStart) {
+            (this.parent as Panel)._onChildDragStart(evt, this);
         }
     };
 
     protected _onDragMove = (evt: MouseEvent) => {
         this.emit('dragmove');
-        // @ts-expect-error accessing protected methods
-        if (this.parent && this.parent._onChildDragStart) {
-            // @ts-expect-error accessing protected methods
-            this.parent._onChildDragMove(evt, this);
+        if (this.parent && (this.parent as Panel)._onChildDragStart) {
+            (this.parent as Panel)._onChildDragMove(evt, this);
         }
     };
 
@@ -346,10 +343,8 @@ class Panel extends Container {
         }
 
         this.emit('dragend');
-        // @ts-expect-error accessing protected methods
-        if (this.parent && this.parent._onChildDragStart) {
-            // @ts-expect-error accessing protected methods
-            this.parent._onChildDragEnd(evt, this);
+        if (this.parent && (this.parent as Panel)._onChildDragStart) {
+            (this.parent as Panel)._onChildDragEnd(evt, this);
         }
     }
 
@@ -372,7 +367,6 @@ class Panel extends Container {
         if (this.collapsed) {
             this.emit(value ? 'collapse' : 'expand');
         }
-
     }
 
     /**

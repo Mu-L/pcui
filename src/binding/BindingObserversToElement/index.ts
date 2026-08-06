@@ -1,7 +1,8 @@
-import { EventHandle, Observer } from '@playcanvas/observer';
+import type { EventHandle, Observer } from '@playcanvas/observer';
 
-import { IBindable } from '../../components';
-import { BindingBase, BindingBaseArgs } from '../BindingBase';
+import type { IBindable } from '../../components';
+import type { BindingBaseArgs } from '../BindingBase';
+import { BindingBase } from '../BindingBase';
 
 /**
  * The interface for arguments for the {@link BindingObserversToElement} constructor.
@@ -71,7 +72,9 @@ class BindingObserversToElement extends BindingBase {
                     return this._observers[0].has(path) ? this._observers[0].get(path) : undefined;
                 });
             } else {
-                this._element.value = (this._observers[0].has(this._paths[0]) ? this._observers[0].get(this._paths[0]) : undefined);
+                this._element.value = this._observers[0].has(this._paths[0])
+                    ? this._observers[0].get(this._paths[0])
+                    : undefined;
             }
         } else {
             this._element.values = this._observers.map((observer, i) => {
@@ -83,7 +86,7 @@ class BindingObserversToElement extends BindingBase {
         this.applyingChange = false;
     }
 
-    link(observers: Observer|Observer[], paths: string|string[]) {
+    link(observers: Observer | Observer[], paths: string | string[]) {
         super.link(observers, paths);
 
         // don't render changes when we link

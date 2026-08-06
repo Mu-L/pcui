@@ -1,6 +1,8 @@
-import { Container, ContainerArgs } from '../Container';
-import { Element, IFocusable } from '../Element';
-import { MenuItem, MenuItemArgs } from '../MenuItem';
+import type { ContainerArgs } from '../Container';
+import { Container } from '../Container';
+import type { Element, IFocusable } from '../Element';
+import type { MenuItemArgs } from '../MenuItem';
+import { MenuItem } from '../MenuItem';
 
 const CLASS_MENU = 'pcui-menu';
 const CLASS_MENU_ITEMS = `${CLASS_MENU}-items`;
@@ -115,8 +117,7 @@ class Menu extends Container implements IFocusable {
             item.hidden = !item.onIsVisible();
         }
 
-        // @ts-expect-error
-        for (const child of item._containerItems.dom.childNodes) {
+        for (const child of (item as unknown as { _containerItems: Container })._containerItems.dom.childNodes) {
             this._filterMenuItems(child.ui as MenuItem);
         }
     }
@@ -141,8 +142,7 @@ class Menu extends Container implements IFocusable {
     protected _limitSubmenuAtScreenEdges(item: MenuItem) {
         if (!(item instanceof MenuItem) || !item.hasChildren) return;
 
-        // @ts-expect-error
-        const containerItems = item._containerItems;
+        const containerItems = (item as unknown as { _containerItems: Container })._containerItems;
 
         containerItems.style.top = '';
         containerItems.style.left = '';
@@ -191,8 +191,8 @@ class Menu extends Container implements IFocusable {
     position(x: number, y: number) {
         const rect = this._containerMenuItems.dom.getBoundingClientRect();
 
-        let left = (x || 0);
-        let top = (y || 0);
+        let left = x || 0;
+        let top = y || 0;
 
         // limit to bottom / top of screen
         if (top + rect.height > window.innerHeight) {

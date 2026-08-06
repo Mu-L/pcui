@@ -1,4 +1,5 @@
-import { Element, ElementArgs } from '../Element';
+import type { ElementArgs } from '../Element';
+import { Element } from '../Element';
 
 const CLASS_BUTTON = 'pcui-button';
 
@@ -15,15 +16,15 @@ interface ButtonArgs extends ElementArgs {
     /**
      * Sets the text of the button. Defaults to ''.
      */
-    text?: string,
+    text?: string;
     /**
      * The CSS code for an icon for the button. e.g. 'E401' (notice we omit the '\\' character). Defaults to ''.
      */
-    icon?: string,
+    icon?: string;
     /**
      * Sets the 'size' type of the button. Can be 'small' or `null`. Defaults to `null`.
      */
-    size?: 'small'
+    size?: 'small';
 }
 
 /**

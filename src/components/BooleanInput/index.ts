@@ -1,5 +1,6 @@
 import { CLASS_NOT_FLEXIBLE, CLASS_MULTIPLE_VALUES } from '../../class';
-import { Element, ElementArgs, IBindable, IBindableArgs, IFocusable } from '../Element';
+import type { ElementArgs, IBindable, IBindableArgs, IFocusable } from '../Element';
+import { Element } from '../Element';
 
 const CLASS_BOOLEAN_INPUT = 'pcui-boolean-input';
 const CLASS_BOOLEAN_INPUT_TICKED = `${CLASS_BOOLEAN_INPUT}-ticked`;
@@ -8,21 +9,21 @@ const CLASS_BOOLEAN_INPUT_TOGGLE = `${CLASS_BOOLEAN_INPUT}-toggle`;
 /**
  * The arguments for the {@link BooleanInput} constructor.
  */
-interface BooleanInputArgs extends ElementArgs, IBindableArgs {
+interface BooleanInputArgs extends ElementArgs<boolean>, IBindableArgs<boolean> {
     /**
      * Sets the tabIndex of the {@link BooleanInput}. Defaults to 0.
      */
-    tabIndex?: number,
+    tabIndex?: number;
     /**
      * The type of checkbox. Currently can be `null` or 'toggle'.
      */
-    type?: string
+    type?: string;
 }
 
 /**
  * A checkbox element.
  */
-class BooleanInput extends Element implements IBindable, IFocusable {
+class BooleanInput extends Element implements IBindable<boolean>, IFocusable {
     protected _value: boolean;
 
     protected _renderChanges: boolean;
@@ -140,9 +141,8 @@ class BooleanInput extends Element implements IBindable, IFocusable {
         return this._value;
     }
 
-    /* eslint accessor-pairs: 0 */
     set values(values: boolean[]) {
-        const different = values.some(v => v !== values[0]);
+        const different = values.some((v) => v !== values[0]);
 
         if (different) {
             this._updateValue(null);
